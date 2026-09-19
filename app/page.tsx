@@ -1,395 +1,539 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { FormEvent, ReactNode, SVGProps } from 'react';
 
-// Dữ liệu danh mục và món Signature
-const MENU_CATEGORIES = [
-  { id: 'coffee', name: 'Cà Phê Thượng Hạng' },
-  { id: 'signature', name: 'Chuồn Chuồn Signature' },
-  { id: 'tea', name: 'Trà Hoa & Thảo Mộc' },
-  { id: 'pastry', name: 'Bánh Thủ Công' },
-];
+/* COZE INTEGRATION — deliberately disabled until configured.
+ * Paste the exact CDN URL from Coze → Publish → Web SDK → Installation.
+ * Match createCozeOptions to that SDK version's installation snippet.
+ * This is a client-side demo: anything placed here is public in the JS bundle.
+ * Never put a production secret here. Production authentication should use a
+ * server-issued, short-lived credential supported by the selected SDK version.
+ * Reference: https://www.coze.com/open/docs/developer_guides/web_sdk
+ */
+const COZE_CONFIG: { enabled: boolean; sdkUrl: string; botId: string; token: string } = {
+  enabled: false,
+  sdkUrl: '',
+  botId: '',
+  token: '',
+};
 
-const MENU_ITEMS = [
-  {
-    id: 1,
-    category: 'signature',
-    name: 'Cánh Chuồn Hoàng Hôn',
-    desc: 'Cold brew ủ lạnh 24h kết hợp hương hoa đậu biếc, mứt cam bergamot và khói quế.',
-    price: '85.000đ',
-    badge: 'Best Seller',
-    image: 'https://images.unsplash.com/photo-1517701604599-bb29b565090c?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 2,
-    category: 'signature',
-    name: 'Sương Khói Chuồn Chuồn',
-    desc: 'Espresso Arabica Cầu Đất hòa cùng bọt sữa dừa nướng béo ngậy và hạt phỉ caramel.',
-    price: '79.000đ',
-    badge: 'Signature',
-    image: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 3,
-    category: 'coffee',
-    name: 'Pour Over Geisha Cầu Đất',
-    desc: 'Hạt cà phê thủ công chiết xuất tinh khiết mang nốt hương hoa nhài và cam đào thanh tao.',
-    price: '95.000đ',
-    badge: 'Specialty',
-    image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 4,
-    category: 'coffee',
-    name: 'Salted Foam Robusta',
-    desc: 'Robusta truyền thống pha phin nguyên bản phủ lớp kem mặn phô mai dẻo mịn.',
-    price: '65.000đ',
-    badge: 'Popular',
-    image: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 5,
-    category: 'tea',
-    name: 'Bạch Trà Mẫu Đơn Hoa Đào',
-    desc: 'Trà trắng thượng hạng đượm hương mật ong rừng và cánh hoa đào sấy lạnh.',
-    price: '75.000đ',
-    badge: 'Healthy',
-    image: 'https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 6,
-    category: 'pastry',
-    name: 'Tart Phô Mai Nướng Quả Mọng',
-    desc: 'Vỏ tart bơ giòn rụm, kem phô mai mascarpone béo ngậy ăn kèm sốt dâu tây dại.',
-    price: '68.000đ',
-    badge: 'Handmade',
-    image: 'https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=800&q=80',
-  },
-];
+type CozeChatClientInstance = {
+  showChatBot?: () => void;
+  hideChatBot?: () => void;
+  destroy?: () => void;
+};
+type CozeWebSDKGlobal = {
+  WebChatClient: new (options: Record<string, unknown>) => CozeChatClientInstance;
+};
+declare global {
+  interface Window {
+    CozeWebSDK?: CozeWebSDKGlobal;
+  }
+}
 
-const FEATURES = [
-  {
-    title: 'Hạt Cà Phê Tuyển Chọn',
-    desc: '100% hạt Arabica & Robusta thu hoạch thủ công tại đồi cao Cầu Đất, rang mộc chuẩn nhiệt.',
-    icon: (
-      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-      </svg>
-    ),
-  },
-  {
-    title: 'Không Gian Tĩnh Tại',
-    desc: 'Thiết kế kết hợp mộc gỗ, giếng trời và mảng xanh thiên nhiên, mang lại sự thư thái tuyệt đối.',
-    icon: (
-      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-      </svg>
-    ),
-  },
-  {
-    title: 'Nghệ Thuật Pha Chế',
-    desc: 'Mỗi tách đồ uống là một tác phẩm được sáng tạo bởi các Barista dày dặn đam mê và kỹ thuật.',
-    icon: (
-      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
-      </svg>
-    ),
-  },
-];
+function createCozeOptions(): Record<string, unknown> {
+  // Isolated adapter for the installation pattern supplied in the specification.
+  // If your published SDK uses botId rather than bot_id, change this adapter.
+  return {
+    config: { bot_id: COZE_CONFIG.botId, isIframe: false },
+    auth: { type: 'token', token: COZE_CONFIG.token, onRefreshToken: async () => COZE_CONFIG.token },
+    ui: {
+      base: { layout: 'pc', zIndex: 80 },
+      asstBtn: { isNeed: false },
+      chatBot: { title: 'Chuồn Chuồn Garden Concierge', uploadable: false },
+    },
+  };
+}
 
-export default function ChuonChuonLuxuryCoffee() {
-  const [activeCategory, setActiveCategory] = useState('signature');
-  const [scrolled, setScrolled] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+type ChatState = 'disabled' | 'loading' | 'ready' | 'unavailable';
+function useCoze() {
+  const clientRef = useRef<CozeChatClientInstance | null>(null);
+  const [state, setState] = useState<ChatState>('disabled');
 
   useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 40);
+    if (typeof window === 'undefined' || !COZE_CONFIG.enabled) return;
+    if (!COZE_CONFIG.sdkUrl || !COZE_CONFIG.botId || !COZE_CONFIG.token) {
+      setState('unavailable');
+      return;
+    }
+    let absoluteUrl: string;
+    try {
+      const url = new URL(COZE_CONFIG.sdkUrl);
+      if (url.protocol !== 'https:') { setState('unavailable'); return; }
+      absoluteUrl = url.href;
+    } catch { setState('unavailable'); return; }
+
+    let disposed = false;
+    let initialized = false;
+    let owned = false;
+    let loadTimer: ReturnType<typeof setTimeout> | undefined;
+    setState('loading');
+    let script = Array.from(document.scripts).find((node) => node.src === absoluteUrl);
+
+    const onLoad = () => {
+      if (disposed || initialized) return;
+      if (loadTimer) clearTimeout(loadTimer);
+      if (script) script.dataset.chuonCozeLoaded = 'true';
+      const Client = window.CozeWebSDK?.WebChatClient;
+      if (!Client) { setState('unavailable'); return; }
+      try {
+        clientRef.current = new Client(createCozeOptions());
+        initialized = true;
+        setState(typeof clientRef.current.showChatBot === 'function' ? 'ready' : 'unavailable');
+      } catch { setState('unavailable'); }
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    const onError = () => {
+      if (loadTimer) clearTimeout(loadTimer);
+      if (!disposed) setState('unavailable');
+    };
+
+    if (!script) {
+      script = document.createElement('script');
+      script.src = absoluteUrl;
+      script.async = true;
+      script.dataset.chuonCoze = 'true';
+      script.onload = onLoad;
+      script.onerror = onError;
+      owned = true;
+      document.body.appendChild(script);
+    } else {
+      script.addEventListener('load', onLoad);
+      script.addEventListener('error', onError);
+      // An already-loaded script has already completed its load event.
+      if (script.dataset.chuonCozeLoaded === 'true' || window.CozeWebSDK?.WebChatClient) {
+        queueMicrotask(onLoad);
+      }
+    }
+    loadTimer = setTimeout(onError, 15000);
+    return () => {
+      disposed = true;
+      if (loadTimer) clearTimeout(loadTimer);
+      script?.removeEventListener('load', onLoad);
+      script?.removeEventListener('error', onError);
+      if (owned && script) { script.onload = null; script.onerror = null; script.remove(); }
+      const client = clientRef.current;
+      clientRef.current = null;
+      try {
+        if (client?.destroy) client.destroy();
+        else client?.hideChatBot?.();
+      } catch { /* Optional third-party cleanup must not interrupt navigation. */ }
+    };
   }, []);
 
-  const filteredItems = activeCategory === 'all' 
-    ? MENU_ITEMS 
-    : MENU_ITEMS.filter((item) => item.category === activeCategory);
+  const open = (): boolean => {
+    if (state !== 'ready' || !clientRef.current?.showChatBot) return false;
+    try { clientRef.current.showChatBot(); return true; }
+    catch { setState('unavailable'); return false; }
+  };
+  return { state, open };
+}
 
-  return (
-    <div className="min-h-screen bg-[#0d0d0c] text-stone-200 font-sans selection:bg-amber-600 selection:text-white">
-      {/* Thanh Header Glassmorphism */}
-      <nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-          scrolled
-            ? 'bg-[#0d0d0c]/85 backdrop-blur-xl border-b border-amber-500/10 py-4 shadow-2xl'
-            : 'bg-transparent py-6'
-        }`}
-      >
-        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          <a href="#" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-full border border-amber-500/40 flex items-center justify-center bg-gradient-to-br from-amber-500/20 to-transparent group-hover:border-amber-400 transition-all duration-300 shadow-[0_0_15px_rgba(245,158,11,0.15)]">
-              {/* Biểu tượng Cánh Chuồn Chuồn */}
-              <svg className="w-6 h-6 text-amber-400 transform group-hover:scale-110 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 2v20M7 8c2.5 0 5-2 5-2s2.5 2 5 2 5-2 5-2-2.5 4-5 4-5-2-5-2M7 14c2.5 0 5-1.5 5-1.5s2.5 1.5 5 1.5 4-1.5 4-1.5-2 3.5-4 3.5-5-2-5-2" />
-              </svg>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xl font-serif tracking-[0.25em] text-amber-200 uppercase font-bold">
-                Chuồn Chuồn
-              </span>
-              <span className="text-[10px] tracking-[0.3em] text-amber-500/80 uppercase font-light">
-                Artisanal Coffee & Tea
-              </span>
-            </div>
-          </a>
+type IconName = 'arrow' | 'leaf' | 'bean' | 'flower' | 'clock' | 'pin' | 'menu' | 'close' | 'check' | 'chat' | 'phone' | 'mail';
+type IconProps = SVGProps<SVGSVGElement> & { name: IconName };
+function Icon({ name, ...props }: IconProps) {
+  const artwork: Record<IconName, ReactNode> = {
+    arrow: <><path d="M5 19 19 5M5 5h14v14" /></>,
+    leaf: <><path d="M5 19C-1 7 12 3 21 3c0 10-4 18-13 15M4 21 16 9" /><path d="m9 16 0-6m0 6 6 0" /></>,
+    bean: <><ellipse cx="12" cy="12" rx="7.5" ry="10" transform="rotate(35 12 12)" /><path d="M17 4c-9 3-1 12-10 16" /></>,
+    flower: <><path d="M12 8c-7-11-12 2-5 4-10 5 1 14 5 4 5 10 15 0 5-4 7-3 0-15-5-4Z" /><circle cx="12" cy="12" r="2" /></>,
+    clock: <><circle cx="12" cy="12" r="9" /><path d="M12 6v6l4 2" /></>,
+    pin: <><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z" /><circle cx="12" cy="10" r="2.5" /></>,
+    menu: <><path d="M4 7h16M4 12h16M4 17h16" /></>,
+    close: <><path d="m6 6 12 12M18 6 6 18" /></>,
+    check: <><path d="m5 12 4 4L19 6" /></>,
+    chat: <><path d="M20 11a8 8 0 0 1-8 8H8l-5 3 1-6a8 8 0 0 1-1-4 8 8 0 0 1 9-8" /><path d="M12 12c-1-6 4-8 9-8 0 5-2 9-7 8m-3 3 7-8" /></>,
+    phone: <><path d="m8 3 3 5-3 3c1 2 3 4 5 5l3-3 5 3c0 3-2 5-4 5C10 21 3 14 3 7c0-2 2-4 5-4Z" /></>,
+    mail: <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></>,
+  };
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>{artwork[name]}</svg>;
+}
 
-          {/* Desktop Nav */}
-          <div className="hidden md:flex items-center gap-8 text-sm tracking-wider uppercase">
-            <a href="#about" className="text-stone-300 hover:text-amber-400 transition-colors duration-300">Về Chúng Tôi</a>
-            <a href="#menu" className="text-stone-300 hover:text-amber-400 transition-colors duration-300">Thực Đơn</a>
-            <a href="#experience" className="text-stone-300 hover:text-amber-400 transition-colors duration-300">Trải Nghiệm</a>
-            <a href="#contact" className="text-stone-300 hover:text-amber-400 transition-colors duration-300">Liên Hệ</a>
-          </div>
+function DragonflyMark(props: SVGProps<SVGSVGElement>) {
+  return <svg viewBox="0 0 80 80" fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+    <path d="M40 25v35m0-31C13-3-7 23 40 35m0-6C67-3 87 23 40 35m0 0C5 16 12 55 40 38m0-3c35-19 28 20 0 3" />
+    <circle cx="40" cy="22" r="3" /><path d="M39 63c5-5 9-7 16-8m-7 5c-2-7 1-12 8-14 2 7-1 12-8 14" />
+  </svg>;
+}
+function LeafSprig(props: SVGProps<SVGSVGElement>) {
+  return <svg viewBox="0 0 180 260" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+    <path d="M30 249C88 197 85 109 144 14M64 208C14 210 2 171 7 150c35 7 54 25 57 58Zm15-42c43 3 66-22 69-53-34 5-57 19-69 53Zm14-47C54 112 42 83 49 56c28 12 43 30 44 63Zm25-61c26 2 47-16 54-40-25 0-44 15-54 40Z" />
+    <path d="m64 208-41-39m56-3 50-37m-36-10L63 76m55-18 37-26" />
+  </svg>;
+}
 
-          <div className="hidden md:flex items-center gap-4">
-            <a
-              href="#booking"
-              className="relative px-6 py-2.5 rounded-full text-xs uppercase tracking-widest font-medium text-amber-300 border border-amber-500/30 overflow-hidden group hover:border-amber-400 transition-all duration-300"
-            >
-              <span className="absolute inset-0 bg-gradient-to-r from-amber-600/30 to-amber-400/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
-              <span className="relative z-10">Đặt Bàn Ngay</span>
-            </a>
-          </div>
+const photo = (id: string, width = 900) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${width}&q=85`;
+// Fixed Unsplash photographs; these are illustrative, not verified branch photos.
+const MEDIA = {
+  garden: photo('1554118811-1e0d58224f24', 1400),
+  coffee: photo('1442512595331-e89e73853f31'),
+  latte: photo('1541167760496-1628856ab772'),
+  iced: photo('1517701604599-bb29b565090c'),
+  matcha: photo('1515823064-d6e0c04616a7'),
+  tea: photo('1564890369478-c89ca6d9cde9'),
+  fruitTea: photo('1576092768241-dec231879fc3'),
+  cake: photo('1533134242443-d4fd215305ad'),
+  tart: photo('1519915028121-7d3463d20b13'),
+  pastry: photo('1555507036-ab1f4038808a'),
+};
 
-          {/* Mobile button */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden text-stone-300 hover:text-amber-400 p-2"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              {mobileMenuOpen ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 6h7" />
-              )}
-            </svg>
-          </button>
-        </div>
+type MenuCategory = 'Signature' | 'Cà phê' | 'Trà & Thảo mộc' | 'Bánh';
+type MenuFilter = MenuCategory | 'Tất cả';
+type MenuItem = { id: number; name: string; category: MenuCategory; description: string; price: string; image: string; alt: string; badge?: string };
+const CATEGORIES: MenuFilter[] = ['Signature', 'Cà phê', 'Trà & Thảo mộc', 'Bánh', 'Tất cả'];
+const MENU: MenuItem[] = [
+  { id: 1, name: 'Chuồn Chuồn Cloud', category: 'Signature', description: 'Espresso, kem sữa hạt, mật hoa và lớp bọt muối biển.', price: '79.000đ', image: MEDIA.iced, alt: 'Cà phê sữa đá trong ly thủy tinh, các lớp cà phê hòa vào sữa.', badge: 'Được yêu thích' },
+  { id: 2, name: 'Matcha Vườn Sớm', category: 'Signature', description: 'Matcha, sữa yến mạch và chút vanilla tự nhiên.', price: '82.000đ', image: MEDIA.matcha, alt: 'Tách matcha xanh với họa tiết lá tạo từ bọt sữa.', badge: 'Garden signature' },
+  { id: 3, name: 'Cold Brew Cam Mật', category: 'Signature', description: 'Cà phê ủ lạnh 18 giờ, cam vàng và mật ong hoa.', price: '76.000đ', image: MEDIA.iced, alt: 'Ly cà phê đá trên bàn gỗ, ảnh minh họa cho dòng cà phê lạnh.', badge: 'Ủ chậm 18 giờ' },
+  { id: 4, name: 'Arabica Đà Lạt', category: 'Cà phê', description: 'Pour-over rang vừa, hương hoa, citrus và caramel.', price: '72.000đ', image: MEDIA.coffee, alt: 'Nước nóng được rót qua phễu lọc cà phê thủ công.' },
+  { id: 5, name: 'Botanical Latte', category: 'Cà phê', description: 'Espresso, sữa tươi và syrup thảo mộc nhà làm.', price: '75.000đ', image: MEDIA.latte, alt: 'Barista rót sữa tạo hình trên tách latte.', badge: "Barista’s pick" },
+  { id: 6, name: 'Coconut Garden', category: 'Cà phê', description: 'Espresso, dừa non và lớp kem dừa mềm mịn.', price: '78.000đ', image: MEDIA.iced, alt: 'Ly cà phê đá với lớp sữa trắng hòa vào espresso.' },
+  { id: 7, name: 'Trà Hoa Cúc & Lê', category: 'Trà & Thảo mộc', description: 'Cúc vàng, lê tươi và vị ngọt dịu của mật ong.', price: '72.000đ', image: MEDIA.tea, alt: 'Tách trà thảo mộc, gợi cảm giác ấm áp và thư giãn.', badge: 'Theo mùa' },
+  { id: 8, name: 'Hibiscus Dâu Tằm', category: 'Trà & Thảo mộc', description: 'Atiso đỏ, dâu tằm và lát cam vàng thơm nhẹ.', price: '74.000đ', image: MEDIA.fruitTea, alt: 'Trà đang được ngâm trong tách thủy tinh trong suốt.' },
+  { id: 9, name: 'Oolong Mộc Hoa', category: 'Trà & Thảo mộc', description: 'Oolong, quế hoa và đào trắng thanh mát.', price: '76.000đ', image: MEDIA.tea, alt: 'Trà được bày trong tách, minh họa cho dòng trà hoa.' },
+  { id: 10, name: 'Tart Chanh Thảo Mộc', category: 'Bánh', description: 'Lemon curd, thyme và đế bánh hạnh nhân giòn.', price: '68.000đ', image: MEDIA.tart, alt: 'Bánh ngọt thủ công dùng kèm cà phê hoặc trà.' },
+  { id: 11, name: 'Basque Matcha', category: 'Bánh', description: 'Cheesecake nướng mềm, thêm vị matcha dịu nhẹ.', price: '72.000đ', image: MEDIA.cake, alt: 'Bánh cheesecake phủ trái cây, ảnh minh họa cho bánh thủ công.', badge: 'Mẻ bánh mới' },
+  { id: 12, name: 'Croissant Hạnh Nhân', category: 'Bánh', description: 'Bơ lên men và nhân kem hạnh nhân thơm bùi.', price: '62.000đ', image: MEDIA.pastry, alt: 'Bánh croissant vàng nhiều lớp đang được rắc đường.' },
+];
+const NAV = [
+  { href: '#story', text: 'Câu chuyện' }, { href: '#garden', text: 'Không gian' },
+  { href: '#menu', text: 'Thực đơn' }, { href: '#reservation', text: 'Đặt bàn' },
+  { href: '#contact', text: 'Liên hệ' },
+];
+const LOCATIONS = [
+  { city: 'Đà Lạt', name: 'Chuồn Chuồn Đà Lạt', address: '12 Trần Hưng Đạo, Phường 10, Đà Lạt', hours: '07:00 — 22:30', note: 'Một chút sương, một chút nắng.', number: '01' },
+  { city: 'TP. Hồ Chí Minh', name: 'Chuồn Chuồn Sài Gòn', address: '28 Nguyễn Văn Hưởng, Thảo Điền, TP. Hồ Chí Minh', hours: '07:00 — 23:00', note: 'Một khoảng xanh giữa phố.', number: '02' },
+];
+const PRIMARY = 'group inline-flex min-h-12 items-center justify-center gap-4 rounded-full bg-[#315C4A] px-6 py-3.5 text-sm font-medium text-white transition duration-300 hover:bg-[#21493B] hover:shadow-lg active:scale-[0.98]';
+const SECONDARY = 'group inline-flex min-h-12 items-center justify-center gap-3 rounded-full border border-[#C8D9C9] px-6 py-3.5 text-sm font-medium text-[#315C4A] transition duration-300 hover:bg-[#E5EEE5] active:scale-[0.98]';
+const INPUT = 'mt-2 min-h-12 w-full rounded-xl border border-[#D4E2D7] bg-white/85 px-4 py-3 text-base text-[#203129] outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100 aria-[invalid=true]:border-[#A54C3B]';
 
-        {/* Mobile menu dropdown */}
-        {mobileMenuOpen && (
-          <div className="md:hidden bg-[#141412] border-b border-amber-500/20 px-6 py-6 flex flex-col gap-4 text-center">
-            <a href="#about" onClick={() => setMobileMenuOpen(false)} className="py-2 text-stone-300 hover:text-amber-400">Về Chúng Tôi</a>
-            <a href="#menu" onClick={() => setMobileMenuOpen(false)} className="py-2 text-stone-300 hover:text-amber-400">Thực Đơn</a>
-            <a href="#experience" onClick={() => setMobileMenuOpen(false)} className="py-2 text-stone-300 hover:text-amber-400">Trải Nghiệm</a>
-            <a href="#contact" onClick={() => setMobileMenuOpen(false)} className="py-2 text-stone-300 hover:text-amber-400">Liên Hệ</a>
-            <a href="#booking" onClick={() => setMobileMenuOpen(false)} className="mt-2 py-3 bg-gradient-to-r from-amber-600 to-amber-500 text-stone-950 font-bold rounded-full text-xs uppercase tracking-widest">
-              Đặt Bàn Ngay
-            </a>
-          </div>
-        )}
+function Brand({ compact = false }: { compact?: boolean }) {
+  return <a href="#top" aria-label="Chuồn Chuồn — về đầu trang" className="inline-flex shrink-0 items-center gap-2.5 text-[#315C4A]">
+    <DragonflyMark className={compact ? 'h-12 w-12' : 'h-14 w-14'} />
+    <span><span className="block text-[15px] font-semibold tracking-[0.13em]">CHUỒN CHUỒN</span><span className="mt-0.5 block text-[10px] tracking-[0.15em] text-[#69766F]">BOTANICAL COFFEE & TEA</span></span>
+  </a>;
+}
+function Eyebrow({ children, light = false }: { children: ReactNode; light?: boolean }) {
+  return <p className={`flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.2em] ${light ? 'text-white/90' : 'text-[#526F5E]'}`}><span aria-hidden="true" className="h-px w-8 bg-current opacity-60" />{children}</p>;
+}
+function Photo({ src, alt, className = '', eager = false, sizes = '(min-width: 1024px) 45vw, 100vw' }: { src: string; alt: string; className?: string; eager?: boolean; sizes?: string }) {
+  const [failed, setFailed] = useState(false);
+  return <div className={`relative overflow-hidden bg-[#E5EEE5] ${className}`}>
+    {failed ? <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-5 text-center text-sm text-[#315C4A]" role="img" aria-label={alt}><Icon name="leaf" className="h-10 w-10" /><span>Khoảnh khắc trong khu vườn</span><span className="text-xs">Ảnh tạm thời chưa tải được</span></div> :
+      <img src={src} srcSet={`${src.replace(/w=\d+/, 'w=480')} 480w, ${src.replace(/w=\d+/, 'w=900')} 900w, ${src.replace(/w=\d+/, 'w=1400')} 1400w`} sizes={sizes} alt={alt} width={1200} height={1500} loading={eager ? 'eager' : 'lazy'} fetchPriority={eager ? 'high' : 'auto'} decoding="async" onError={() => setFailed(true)} className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]" />}
+  </div>;
+}
+
+function Header() {
+  const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const navRef = useRef<HTMLElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+  useEffect(() => {
+    if (!open) return;
+    navRef.current?.querySelector<HTMLAnchorElement>('a')?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { setOpen(false); toggleRef.current?.focus(); }
+    };
+    const outside = (event: PointerEvent) => {
+      if (event.target instanceof Node && !headerRef.current?.contains(event.target)) setOpen(false);
+    };
+    const onResize = () => { if (window.innerWidth >= 1024) setOpen(false); };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('pointerdown', outside);
+    window.addEventListener('resize', onResize);
+    return () => { document.removeEventListener('keydown', onKey); document.removeEventListener('pointerdown', outside); window.removeEventListener('resize', onResize); };
+  }, [open]);
+  return <header ref={headerRef} className={`fixed inset-x-0 top-0 z-50 border-b backdrop-blur-xl transition-all duration-300 ${scrolled || open ? 'border-[#D4E2D7]/70 bg-[#FFFDFC]/95 shadow-sm' : 'border-white/60 bg-[#FAF8F5]/80'}`}>
+    <div className="mx-auto flex h-[84px] max-w-[1360px] items-center justify-between gap-6 px-5 sm:px-8 lg:px-10">
+      <Brand compact />
+      <nav aria-label="Điều hướng chính" className="hidden items-center gap-7 lg:flex">
+        {NAV.map((link) => <a key={link.href} href={link.href} className="cc-nav py-3 text-sm text-[#435B4D]">{link.text}</a>)}
       </nav>
-
-      {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center pt-24 pb-16 overflow-hidden">
-        {/* Glow ambient background */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-amber-600/10 blur-[150px] rounded-full pointer-events-none" />
-        <div className="absolute -bottom-10 right-10 w-[400px] h-[400px] bg-orange-700/10 blur-[140px] rounded-full pointer-events-none" />
-
-        <div className="relative max-w-5xl mx-auto px-6 text-center z-10 flex flex-col items-center">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 mb-8 backdrop-blur-md animate-pulse">
-            <span className="w-2 h-2 rounded-full bg-amber-400" />
-            <span className="text-xs uppercase tracking-[0.2em] text-amber-300 font-medium">
-              Không gian trải nghiệm cà phê thủ công
-            </span>
-          </div>
-
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-serif text-stone-100 font-extralight tracking-tight leading-[1.15] mb-6">
-            Nơi Cánh Chuồn Nghỉ Lại, <br />
-            <span className="font-normal italic bg-gradient-to-r from-amber-200 via-amber-400 to-amber-600 bg-clip-text text-transparent">
-              Hương Cà Phê Ngưng Đọng
-            </span>
-          </h1>
-
-          <p className="text-stone-400 max-w-2xl text-base sm:text-lg leading-relaxed font-light mb-10">
-            Được chế tác từ những hạt mộc Cầu Đất tinh túy nhất trong không gian ngập tràn ánh sáng và thanh âm thiên nhiên. Khám phá khoảnh khắc thưởng trà và cà phê an yên trọn vẹn.
-          </p>
-
-          <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
-            <a
-              href="#menu"
-              className="w-full sm:w-auto px-8 py-4 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-stone-950 font-bold text-xs uppercase tracking-[0.2em] shadow-[0_0_30px_rgba(245,158,11,0.25)] hover:shadow-[0_0_40px_rgba(245,158,11,0.4)] transition-all duration-300 transform hover:-translate-y-1"
-            >
-              Khám Phá Menu
-            </a>
-            <a
-              href="#about"
-              className="w-full sm:w-auto px-8 py-4 rounded-full border border-stone-700 hover:border-amber-400/60 bg-stone-900/40 backdrop-blur-sm text-stone-300 hover:text-amber-200 text-xs uppercase tracking-[0.2em] transition-all duration-300"
-            >
-              Câu Chuyện Của Chúng Tôi
-            </a>
-          </div>
-
-          {/* Quick specs banner */}
-          <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-12 border-t border-stone-800/80 pt-10 w-full">
-            <div>
-              <div className="text-3xl font-serif text-amber-300 font-normal">100%</div>
-              <div className="text-xs text-stone-400 tracking-wider uppercase mt-1">Hạt Mộc Nguyên Chất</div>
-            </div>
-            <div>
-              <div className="text-3xl font-serif text-amber-300 font-normal">24h</div>
-              <div className="text-xs text-stone-400 tracking-wider uppercase mt-1">Ủ Lạnh Cold Brew Tinh Túy</div>
-            </div>
-            <div>
-              <div className="text-3xl font-serif text-amber-300 font-normal">1,500m</div>
-              <div className="text-xs text-stone-400 tracking-wider uppercase mt-1">Độ Cao Thu Hoạch Cầu Đất</div>
-            </div>
-            <div>
-              <div className="text-3xl font-serif text-amber-300 font-normal">08:00 - 22:30</div>
-              <div className="text-xs text-stone-400 tracking-wider uppercase mt-1">Đón Bạn Mỗi Ngày</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Feature Section */}
-      <section id="about" className="py-24 bg-[#121210] border-y border-stone-800/60 relative">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="text-xs uppercase tracking-[0.3em] text-amber-400 mb-3 font-medium">Giá Trị Cốt Lõi</h2>
-            <p className="text-3xl sm:text-4xl font-serif text-stone-100 font-light">Mỗi Tách Cà Phê Là Một Tác Phẩm</p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {FEATURES.map((feat, index) => (
-              <div
-                key={index}
-                className="group relative p-8 rounded-2xl bg-[#181816]/70 border border-stone-800/80 hover:border-amber-500/40 transition-all duration-500 hover:-translate-y-2 shadow-lg"
-              >
-                <div className="w-14 h-14 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-amber-500/20 transition-all duration-300">
-                  {feat.icon}
-                </div>
-                <h3 className="text-xl font-serif text-stone-200 mb-3 group-hover:text-amber-300 transition-colors duration-300">
-                  {feat.title}
-                </h3>
-                <p className="text-stone-400 text-sm leading-relaxed font-light">
-                  {feat.desc}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Interactive Menu Section */}
-      <section id="menu" className="py-28 relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-6 relative z-10">
-          <div className="text-center max-w-3xl mx-auto mb-12">
-            <h2 className="text-xs uppercase tracking-[0.3em] text-amber-400 mb-3 font-medium">Thực Đơn Đặc Sắc</h2>
-            <p className="text-3xl sm:text-5xl font-serif text-stone-100 font-light tracking-tight">Hương Vị Được Yêu Thích</p>
-          </div>
-
-          {/* Danh mục Tabs */}
-          <div className="flex flex-wrap items-center justify-center gap-3 mb-14">
-            {MENU_CATEGORIES.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
-                className={`px-6 py-2.5 rounded-full text-xs uppercase tracking-widest transition-all duration-300 ${
-                  activeCategory === cat.id
-                    ? 'bg-amber-500 text-stone-950 font-bold shadow-[0_0_20px_rgba(245,158,11,0.3)] scale-105'
-                    : 'bg-stone-900/80 text-stone-400 border border-stone-800 hover:border-amber-500/40 hover:text-stone-200'
-                }`}
-              >
-                {cat.name}
-              </button>
-            ))}
-          </div>
-
-          {/* Grid Menu Cards */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredItems.map((item) => (
-              <div
-                key={item.id}
-                className="group relative rounded-2xl overflow-hidden bg-[#151513] border border-stone-800/80 hover:border-amber-500/40 transition-all duration-500 hover:-translate-y-2 flex flex-col justify-between shadow-xl"
-              >
-                <div className="relative h-60 overflow-hidden">
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 ease-out"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#151513] via-transparent to-black/30" />
-                  <span className="absolute top-4 right-4 px-3 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-amber-500/90 text-stone-950 shadow-md">
-                    {item.badge}
-                  </span>
-                </div>
-
-                <div className="p-6 flex-1 flex flex-col justify-between">
-                  <div>
-                    <h4 className="text-xl font-serif text-stone-100 group-hover:text-amber-300 transition-colors duration-300 mb-2">
-                      {item.name}
-                    </h4>
-                    <p className="text-stone-400 text-xs sm:text-sm leading-relaxed font-light mb-6">
-                      {item.desc}
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-between pt-4 border-t border-stone-800/60">
-                    <span className="text-lg font-serif text-amber-400 font-medium">{item.price}</span>
-                    <button className="text-xs uppercase tracking-wider text-stone-300 hover:text-amber-400 flex items-center gap-1 group-hover:translate-x-1 transition-all">
-                      Thưởng thức
-                      <span>→</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Booking CTA Section */}
-      <section id="booking" className="py-20 relative bg-gradient-to-b from-[#121210] to-[#0a0a09]">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <div className="p-10 sm:p-14 rounded-3xl border border-amber-500/20 bg-gradient-to-b from-stone-900/60 to-stone-950/90 backdrop-blur-xl relative overflow-hidden shadow-2xl">
-            <div className="absolute -top-24 -left-24 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl" />
-            <h2 className="text-3xl sm:text-4xl font-serif text-stone-100 mb-4 font-light">
-              Đặt Chỗ Trước Cùng Chuồn Chuồn
-            </h2>
-            <p className="text-stone-400 text-sm max-w-md mx-auto mb-8 font-light">
-              Hãy để chúng tôi chuẩn bị chỗ ngồi êm ả nhất và hương vị cà phê tươi mới nhất dành riêng cho bạn.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-              <input
-                type="text"
-                placeholder="Số điện thoại hoặc Email..."
-                className="flex-1 px-5 py-3.5 rounded-full bg-stone-900 border border-stone-700 text-sm focus:outline-none focus:border-amber-400 text-stone-200 placeholder-stone-500"
-              />
-              <button className="px-8 py-3.5 rounded-full bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs uppercase tracking-wider transition-all duration-300 shadow-lg">
-                Xác Nhận
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer id="contact" className="border-t border-stone-800/80 py-12 bg-[#0a0a09] text-stone-500 text-xs">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <span className="font-serif tracking-widest text-stone-300 uppercase font-semibold text-sm">
-              Chuồn Chuồn Coffee
-            </span>
-            <span>|</span>
-            <span>Không gian cà phê thủ công & an yên</span>
-          </div>
-          <div>
-            Đà Lạt & TP. Hồ Chí Minh • Hotline: 090 123 4567
-          </div>
-          <div className="text-stone-600">
-            © 2026 Chuồn Chuồn Artisanal Coffee. All rights reserved.
-          </div>
-        </div>
-      </footer>
+      <a href="#reservation" className={`${PRIMARY} hidden px-5 sm:inline-flex`}>Đặt bàn <Icon name="arrow" className="h-4 w-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" /></a>
+      <button ref={toggleRef} type="button" aria-label={open ? 'Đóng menu' : 'Mở menu'} aria-expanded={open} aria-controls="mobile-navigation" onClick={() => setOpen(!open)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#D4E2D7] text-[#315C4A] lg:hidden"><Icon name={open ? 'close' : 'menu'} className="h-5 w-5" /></button>
     </div>
-  );
+    <div className={`grid transition-[grid-template-rows,visibility] duration-300 lg:hidden ${open ? 'visible grid-rows-[1fr]' : 'invisible grid-rows-[0fr]'}`}>
+      <div className="overflow-hidden"><nav ref={navRef} id="mobile-navigation" aria-label="Điều hướng trên điện thoại" className="mx-auto flex max-w-[1360px] flex-col px-6 pb-6">
+        {NAV.map((link, index) => <a key={link.href} href={link.href} tabIndex={open ? 0 : -1} onClick={() => setOpen(false)} className="flex items-center justify-between border-t border-[#D4E2D7]/70 py-4 text-lg"><span>{link.text}</span><span className="text-xs text-[#69766F]">0{index + 1}</span></a>)}
+        <p className="mt-4 text-xs tracking-wide text-[#69766F]">Một khoảng thở xanh, mỗi ngày.</p>
+      </nav></div>
+    </div>
+  </header>;
+}
+
+function Hero() {
+  return <section aria-labelledby="hero-title" className="relative isolate overflow-hidden pt-32 pb-12 sm:pt-36 lg:pt-40 lg:pb-20">
+    <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10" style={{ background: 'radial-gradient(ellipse at 82% 44%, rgba(200,217,201,.45), transparent 52%)' }} />
+    <div className="mx-auto grid max-w-[1360px] items-center gap-12 px-5 sm:px-8 lg:grid-cols-[1.08fr_1fr] lg:gap-6 lg:px-10">
+      <div className="relative z-10 max-w-[660px] pt-2 lg:pb-12">
+        <Eyebrow>Botanical Coffee · Đà Lạt × Sài Gòn</Eyebrow>
+        <h1 id="hero-title" className="mt-7 text-[clamp(2.7rem,5.65vw,5.4rem)] font-medium leading-[1.12] tracking-[-0.05em] text-[#203129]">Chậm một nhịp.<br /><span className="text-[#315C4A]">Chạm một<br className="hidden lg:block" /> khoảng xanh.</span></h1>
+        <p className="mt-7 max-w-[430px] text-base leading-7 text-[#69766F]">Cà phê rang mộc, trà hoa và những khoảng thở xanh được vun trồng cho những ngày bạn muốn sống chậm hơn một chút.</p>
+        <div className="mt-8 flex flex-wrap items-center gap-3 sm:gap-4">
+          <a href="#menu" className={PRIMARY}>Khám phá thực đơn <Icon name="arrow" className="h-4 w-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" /></a>
+          <a href="#garden" className={SECONDARY}>Ghé khu vườn <Icon name="leaf" className="h-4 w-4" /></a>
+        </div>
+        <dl className="mt-12 grid max-w-[460px] grid-cols-3 divide-x divide-[#D4E2D7] sm:mt-14">
+          {[['100%', 'Hạt rang mộc'], ['18H', 'Cold brew chậm'], ['200+', 'Mảng xanh tự nhiên']].map(([value, label], index) => <div key={label} className={index ? 'pl-4 sm:pl-6' : 'pr-3'}><dt className="text-2xl font-medium tracking-[-0.035em] text-[#315C4A] sm:text-3xl">{value}</dt><dd className="mt-2 text-[11px] leading-5 text-[#69766F] sm:text-xs">{label}</dd></div>)}
+        </dl>
+      </div>
+      <div className="relative mx-auto w-full max-w-[610px] pb-12 pl-7 pr-3 pt-3 sm:pl-14 lg:pb-14 lg:pl-10">
+        <div aria-hidden="true" className="absolute bottom-5 left-12 right-0 top-12 rounded-tl-[150px] rounded-br-[110px] border border-[#C8D9C9]" />
+        <div className="group relative h-[390px] overflow-hidden rounded-tl-[100px] rounded-tr-[32px] rounded-br-[100px] rounded-bl-[32px] sm:h-[540px] lg:h-[590px]">
+          <Photo src={MEDIA.garden} alt="Không gian café sáng với cây xanh, bàn gỗ và những chiếc ghế mây." eager className="h-full" />
+          <span className="absolute right-5 top-7 rounded-full border border-white/70 bg-white/85 px-4 py-2 text-[10px] font-medium uppercase tracking-[0.18em] text-[#315C4A] backdrop-blur-md">Rooted in nature</span>
+        </div>
+        <div className="group absolute -left-1 bottom-1 w-[43%] rotate-[-5deg] rounded-[28px] border-[6px] border-[#FFFDFC] bg-[#FFFDFC] shadow-[0_15px_45px_rgba(33,73,59,0.12)] sm:bottom-0 sm:left-0 sm:w-[42%]">
+          <Photo src={MEDIA.iced} alt="Cà phê sữa đá trong ly thủy tinh, đặt trên bàn gỗ." className="aspect-[4/5] rounded-[22px]" sizes="(min-width: 1024px) 220px, 40vw" />
+          <span className="block py-3 text-center text-[10px] tracking-[0.19em] text-[#526F5E]">SLOWLY BREWED, FOR YOU</span>
+        </div>
+        <div className="absolute bottom-16 right-0 max-w-[220px] rounded-2xl border border-white/80 bg-white/85 px-4 py-4 shadow-[0_12px_40px_rgba(33,73,59,0.07)] backdrop-blur-xl sm:bottom-20 sm:px-6">
+          <p className="text-[14px] font-medium text-[#315C4A]">A little green escape</p><p className="mt-2 flex items-center gap-2 text-[10px] text-[#69766F]"><Icon name="clock" className="h-3.5 w-3.5" />Every day · 07:00–22:30</p>
+        </div>
+        <LeafSprig className="pointer-events-none absolute -right-5 -top-9 h-36 w-28 rotate-[25deg] text-[#6E8C75]/75 sm:-right-8 sm:h-48 sm:w-36" />
+        <DragonflyMark className="cc-float pointer-events-none absolute -left-5 top-4 h-20 w-20 rotate-[-18deg] text-[#6E8C75] sm:top-12" />
+      </div>
+    </div>
+    <div className="mx-auto mt-10 flex max-w-[1280px] items-center gap-5 px-5 sm:px-8 lg:mt-8"><span className="text-[10px] uppercase tracking-[0.22em] text-[#69766F]">A slower kind of everyday</span><span className="h-px flex-1 bg-[#D4E2D7]" /><span className="text-[11px] text-[#69766F]">01 / The green escape</span></div>
+  </section>;
+}
+
+function Story() {
+  return <section id="story" aria-labelledby="story-title" className="relative overflow-hidden px-6 py-20 md:py-28">
+    <LeafSprig className="pointer-events-none absolute -left-12 top-8 hidden h-72 w-52 rotate-[36deg] text-[#C8D9C9]/70 lg:block" />
+    <div className="mx-auto max-w-[870px] text-center">
+      <DragonflyMark className="mx-auto mb-6 h-16 w-16 text-[#7B977F]" />
+      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#69766F]">Câu chuyện của khu vườn</p>
+      <h2 id="story-title" className="mt-6 text-[clamp(1.8rem,3.2vw,3rem)] font-normal leading-[1.35] tracking-[-0.035em] text-[#315C4A]">“Không chỉ là một ly cà phê.<br />Là một khoảng nhỏ để trở về<br className="hidden sm:block" /> với nhịp của chính mình.”</h2>
+      <p className="mx-auto mt-7 max-w-[575px] text-base leading-7 text-[#69766F]">Chuồn Chuồn bắt đầu từ những điều giản dị: một hạt cà phê ngon, một nhành thảo mộc thơm và một chỗ ngồi có nắng. Chúng mình chăm chút từng điều nhỏ, để bạn chỉ cần đến và thong thả.</p>
+      <span className="mx-auto mt-9 block h-10 w-px bg-[#B38A58]/60" aria-hidden="true" />
+    </div>
+  </section>;
+}
+
+function Garden() {
+  const features: { icon: IconName; title: string; text: string; detail: string }[] = [
+    { icon: 'leaf', title: 'Khoảng vườn để thở', text: 'Cây xanh, nắng tự nhiên và những góc ngồi yên tĩnh. Một nơi để đọc vài trang sách, hoặc chẳng cần làm gì.', detail: 'Nắng ghé qua. Bạn ở lại.' },
+    { icon: 'bean', title: 'Hạt cà phê rang mộc', text: 'Hạt được chọn lọc và rang vừa, giữ vị ngọt cùng cá tính tự nhiên. Pha chậm để từng tầng hương có thời gian mở ra.', detail: 'Nguyên bản từ hạt.' },
+    { icon: 'flower', title: 'Thảo mộc theo mùa', text: 'Trà hoa, trái cây và thảo mộc được phối nhẹ theo mùa. Hương thơm vừa đủ, vị thanh để nhâm nhi lâu hơn.', detail: 'Mỗi mùa, một chút mới.' },
+  ];
+  return <section id="garden" aria-labelledby="garden-title" className="bg-[#F1F6F0] py-20 md:py-28">
+    <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
+      <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
+        <div><Eyebrow>Những điều chúng mình gìn giữ</Eyebrow><h2 id="garden-title" className="mt-5 max-w-[640px] text-4xl font-medium leading-[1.2] tracking-[-0.04em] text-[#21493B] md:text-5xl">Từ khu vườn<br />đến từng ngụm nhỏ.</h2></div>
+        <p className="max-w-[310px] text-base leading-7 text-[#69766F]">Không vội vàng. Không cầu kỳ.<br />Chỉ là những điều tốt lành, được làm bằng sự chăm chút.</p>
+      </div>
+      <div className="mt-12 grid gap-5 md:grid-cols-3 md:items-start">
+        {features.map((item, i) => <article key={item.title} className={`group relative overflow-hidden border border-[#D4E2D7]/70 p-7 transition duration-500 hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(33,73,59,0.07)] lg:p-9 ${i === 1 ? 'rounded-tl-[48px] rounded-tr-[24px] rounded-br-[48px] rounded-bl-[24px] bg-[#E5EEE5]/70 md:mt-10' : 'rounded-[24px] bg-white/65'}`}>
+          <div className="flex items-start justify-between"><Icon name={item.icon} className="h-10 w-10 text-[#526F5E]" /><span className="text-4xl font-light tracking-[-0.04em] text-[#9EB5A2]">0{i + 1}</span></div>
+          <h3 className="mt-9 text-xl font-medium tracking-[-0.025em] text-[#21493B]">{item.title}</h3><p className="mt-4 text-[15px] leading-7 text-[#69766F]">{item.text}</p>
+          <p className="mt-8 border-t border-[#C8D9C9]/70 pt-5 text-xs tracking-wide text-[#526F5E]">{item.detail}</p>
+        </article>)}
+      </div>
+      <div className="mt-20 grid gap-5 md:grid-cols-[1.12fr_.88fr] md:gap-6">
+        <figure className="group relative min-h-[430px] md:row-span-2">
+          <div className="absolute inset-0"><Photo src={MEDIA.garden} alt="Café với bàn ghế mây, cây cảnh và ánh sáng tự nhiên." className="h-full rounded-tl-[65px] rounded-tr-[28px] rounded-br-[28px] rounded-bl-[28px]" /></div>
+          <figcaption className="absolute bottom-6 left-5 right-5 rounded-[24px] border border-white/80 bg-white/85 p-6 text-[#315C4A] backdrop-blur-xl sm:left-7 sm:right-auto sm:min-w-[290px]"><span className="text-[10px] uppercase tracking-[0.2em]">The art of taking it slow</span><p className="mt-3 text-3xl leading-tight tracking-[-0.035em]">Grown slowly.<br />Brewed thoughtfully.</p></figcaption>
+        </figure>
+        <figure className="group relative"><Photo src={MEDIA.coffee} alt="Pha cà phê pour-over bằng ấm cổ ngỗng và phễu lọc." className="h-[240px] rounded-[28px] md:h-[280px]" /><figcaption className="absolute bottom-5 left-5 rounded-full bg-white/90 px-4 py-2 text-xs text-[#315C4A]">Một chút tỉ mỉ trong từng lần pha.</figcaption></figure>
+        <div className="grid grid-cols-2 gap-5 md:gap-6">
+          <figure className="group"><Photo src={MEDIA.tea} alt="Tách trà thảo mộc cho một buổi chiều chậm rãi." className="h-[210px] rounded-[24px] md:h-[240px]" /><figcaption className="mt-3 text-[11px] tracking-wide text-[#69766F]">Hoa thơm, trà ấm.</figcaption></figure>
+          <figure className="group pt-8"><Photo src={MEDIA.pastry} alt="Bánh croissant nhiều lớp vàng giòn, phủ đường mịn." className="h-[210px] rounded-[24px] md:h-[240px]" /><figcaption className="mt-3 text-[11px] tracking-wide text-[#69766F]">Thêm một chút ngọt.</figcaption></figure>
+        </div>
+      </div>
+    </div>
+  </section>;
+}
+
+function MenuSection() {
+  const [active, setActive] = useState<MenuFilter>('Signature');
+  const items = active === 'Tất cả' ? MENU : MENU.filter((item) => item.category === active);
+  return <section id="menu" aria-labelledby="menu-title" className="py-20 md:py-28">
+    <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
+      <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+        <div><Eyebrow>From our garden, with love</Eyebrow><h2 id="menu-title" className="mt-5 text-4xl font-medium leading-[1.2] tracking-[-0.04em] text-[#21493B] md:text-5xl">Một chút để nhâm nhi.</h2><p className="mt-5 max-w-[540px] text-base leading-7 text-[#69766F]">Từ những hạt cà phê quen thuộc đến trà hoa được phối nhẹ theo mùa.</p></div>
+        <p className="flex shrink-0 items-center gap-2 text-xs text-[#526F5E]"><Icon name="leaf" className="h-4 w-4" />Được pha khi bạn gọi.</p>
+      </div>
+      <div role="group" aria-label="Lọc thực đơn theo danh mục" className="mt-10 flex gap-2 overflow-x-auto pb-3">
+        {CATEGORIES.map((category) => <button key={category} type="button" aria-pressed={active === category} aria-controls="menu-results" onClick={() => setActive(category)} className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border px-5 py-2.5 text-sm transition duration-300 ${active === category ? 'border-[#315C4A] bg-[#315C4A] text-white' : 'border-[#D4E2D7] bg-[#FFFDFC] text-[#315C4A] hover:border-[#87A58E] hover:bg-[#F1F6F0]'}`}>{active === category && <Icon name="check" className="h-3.5 w-3.5" />}{category}</button>)}
+      </div>
+      <p role="status" className="sr-only">{items.length} món trong danh mục {active}.</p>
+      <div id="menu-results" className="mt-6 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map((item) => <article key={item.id} className="cc-appear group rounded-[28px] bg-[#FFFDFC] p-3 pb-6 transition duration-500 hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(33,73,59,0.07)]">
+          <div className="relative"><Photo src={item.image} alt={item.alt} className="aspect-[5/4] rounded-[22px]" sizes="(min-width: 1024px) 380px, (min-width: 640px) 45vw, 90vw" />{item.badge && <span className="absolute left-4 top-4 rounded-full border border-white/70 bg-[#FFFDFC]/90 px-3 py-1.5 text-[10px] font-medium tracking-wide text-[#315C4A] backdrop-blur-sm">{item.badge}</span>}</div>
+          <div className="px-3 pt-5"><p className="text-[10px] font-medium uppercase tracking-[0.18em] text-[#69766F]">{item.category}</p><h3 className="mt-2 text-[22px] font-medium leading-snug tracking-[-0.025em] text-[#21493B]">{item.name}</h3><p className="mt-3 min-h-[52px] text-sm leading-[1.8] text-[#69766F]">{item.description}</p><div className="mt-5 flex items-center justify-between border-t border-[#E9E2D9]/70 pt-4"><span className="text-lg font-medium tracking-[-0.02em] text-[#315C4A]">{item.price}</span><Icon name={item.category === 'Bánh' ? 'flower' : item.category === 'Cà phê' ? 'bean' : 'leaf'} className="h-5 w-5 text-[#87A58E]" /></div></div>
+        </article>)}
+      </div>
+      <p className="mt-8 text-center text-xs leading-6 text-[#69766F]">Thực đơn và giá minh họa · Ảnh gợi ý phong cách, không phải ảnh chính xác của từng món.</p>
+    </div>
+  </section>;
+}
+
+type ReservationValues = { name: string; contact: string; branch: string };
+type ReservationErrors = Partial<Record<'name' | 'contact', string>>;
+function Reservation() {
+  const [values, setValues] = useState<ReservationValues>({ name: '', contact: '', branch: 'Đà Lạt' });
+  const [errors, setErrors] = useState<ReservationErrors>({});
+  const [success, setSuccess] = useState(false);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const contactRef = useRef<HTMLInputElement>(null);
+  const successRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (success) successRef.current?.focus(); }, [success]);
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const nextErrors: ReservationErrors = {};
+    const name = values.name.trim();
+    const contact = values.contact.trim();
+    const phone = contact.replace(/[\s().-]/g, '');
+    if (!name) nextErrors.name = 'Bạn cho chúng mình biết tên nhé.';
+    const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact);
+    const validPhone = /^(?:0[35789]\d{8}|\+?84[35789]\d{8})$/.test(phone);
+    if (!contact) nextErrors.contact = 'Vui lòng nhập số điện thoại hoặc email.';
+    else if (!validEmail && !validPhone) nextErrors.contact = 'Nhập email hợp lệ hoặc số di động Việt Nam (ví dụ: 0912 345 678).';
+    setErrors(nextErrors);
+    if (nextErrors.name) { nameRef.current?.focus(); return; }
+    if (nextErrors.contact) { contactRef.current?.focus(); return; }
+    // Front-end demonstration only: no network request or storage of personal data.
+    setSuccess(true);
+    setValues({ name: '', contact: '', branch: values.branch });
+  }
+  function update(field: keyof ReservationValues, value: string) {
+    setValues((current) => ({ ...current, [field]: value }));
+    if (field === 'name' || field === 'contact') setErrors((current) => ({ ...current, [field]: undefined }));
+  }
+
+  return <section id="reservation" aria-labelledby="reservation-title" className="relative px-5 pb-20 pt-3 sm:px-8 md:pb-28">
+    <div className="relative isolate mx-auto max-w-[1216px] overflow-hidden rounded-[36px] bg-[#E5EEE5] px-6 py-12 sm:px-10 sm:py-16 lg:px-16 lg:py-20">
+      <div className="pointer-events-none absolute inset-0 -z-10 opacity-[0.13]" aria-hidden="true"><Photo src={MEDIA.garden} alt="" className="h-full" /></div>
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-r from-[#E5EEE5] via-[#E5EEE5]/80 to-transparent" />
+      <LeafSprig className="pointer-events-none absolute -bottom-12 -left-8 h-64 w-48 rotate-[18deg] text-[#87A58E]/40" />
+      <div className="grid items-center gap-10 lg:grid-cols-[1fr_1fr] lg:gap-14">
+        <div><Eyebrow>Your table in the garden</Eyebrow><h2 id="reservation-title" className="mt-6 text-4xl font-medium leading-[1.2] tracking-[-0.04em] text-[#21493B] sm:text-5xl">Dành một chỗ<br />cho buổi chiều<br />thật chậm.</h2><p className="mt-6 max-w-[370px] text-base leading-7 text-[#526F5E]">Để lại thông tin, Chuồn Chuồn sẽ liên hệ xác nhận bàn và gợi ý góc ngồi phù hợp.</p><p className="mt-7 flex items-center gap-2 text-xs text-[#526F5E]"><Icon name="leaf" className="h-4 w-4" />Một góc vườn đang chờ bạn.</p></div>
+        <div className="relative rounded-[28px] border border-white/80 bg-white/75 p-6 shadow-[0_20px_60px_rgba(33,73,59,0.06)] backdrop-blur-xl sm:p-8">
+          {success ? <div ref={successRef} tabIndex={-1} className="cc-appear flex min-h-[350px] flex-col items-center justify-center text-center" role="status">
+            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#E5EEE5] text-[#315C4A]"><Icon name="check" className="h-7 w-7" /></span>
+            <h3 className="mt-6 text-2xl font-medium tracking-[-0.025em] text-[#21493B]">Cảm ơn bạn.</h3><p className="mt-3 text-base leading-7 text-[#526F5E]">Chuồn Chuồn sẽ sớm gửi lời xác nhận.</p>
+            <p className="mt-5 rounded-xl border border-[#D4E2D7] bg-[#F1F6F0] p-4 text-xs leading-6 text-[#526F5E]">Đây là xác nhận minh họa. Thông tin chưa được gửi đến quán và chưa có bàn nào được đặt.</p>
+            <button type="button" onClick={() => { setSuccess(false); requestAnimationFrame(() => nameRef.current?.focus()); }} className={`${SECONDARY} mt-6`}>Trở lại biểu mẫu <Icon name="arrow" className="h-4 w-4" /></button>
+          </div> : <form onSubmit={submit} noValidate aria-label="Đặt bàn minh họa" aria-describedby="reservation-demo" className="space-y-5">
+            <div><label htmlFor="reservation-name" className="text-sm font-medium text-[#315C4A]">Họ và tên <span aria-hidden="true">*</span></label><input ref={nameRef} id="reservation-name" name="name" autoComplete="name" required maxLength={100} value={values.name} onChange={(event) => update('name', event.target.value)} aria-invalid={!!errors.name} aria-describedby={errors.name ? 'name-error' : undefined} className={INPUT} placeholder="Tên bạn là…" />{errors.name && <p id="name-error" className="mt-2 text-xs leading-5 text-[#A54C3B]">{errors.name}</p>}</div>
+            <div><label htmlFor="reservation-contact" className="text-sm font-medium text-[#315C4A]">Số điện thoại hoặc email <span aria-hidden="true">*</span></label><input ref={contactRef} id="reservation-contact" name="contact" type="text" autoComplete="off" autoCapitalize="none" spellCheck={false} required maxLength={254} value={values.contact} onChange={(event) => update('contact', event.target.value)} aria-invalid={!!errors.contact} aria-describedby={errors.contact ? 'contact-error' : undefined} className={INPUT} placeholder="Để chúng mình liên hệ với bạn" />{errors.contact && <p id="contact-error" className="mt-2 text-xs leading-5 text-[#A54C3B]">{errors.contact}</p>}</div>
+            <div><label htmlFor="reservation-branch" className="text-sm font-medium text-[#315C4A]">Chi nhánh</label><select id="reservation-branch" name="branch" value={values.branch} onChange={(event) => update('branch', event.target.value)} className={INPUT}><option>Đà Lạt</option><option>TP. Hồ Chí Minh</option></select></div>
+            <button type="submit" className={`${PRIMARY} w-full`}>Giữ chỗ cho tôi <Icon name="arrow" className="h-4 w-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" /></button>
+            <p id="reservation-demo" className="text-center text-[11px] leading-5 text-[#69766F]">Biểu mẫu trải nghiệm · Thông tin chỉ được kiểm tra trên trang, chưa gửi đến quán.</p>
+          </form>}
+        </div>
+      </div>
+    </div>
+  </section>;
+}
+
+function Locations({ notify }: { notify: (message: string) => void }) {
+  return <section aria-labelledby="locations-title" className="mx-auto max-w-[1280px] px-5 pb-20 sm:px-8 md:pb-28">
+    <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><Eyebrow>Find your little escape</Eyebrow><h2 id="locations-title" className="mt-5 text-3xl font-medium tracking-[-0.035em] text-[#21493B] md:text-4xl">Hẹn bạn ở khu vườn.</h2></div><p className="text-xs text-[#69766F]">Hai thành phố. Cùng một nhịp chậm.</p></div>
+    <div className="mt-9 grid gap-6 md:grid-cols-2">
+      {LOCATIONS.map((location) => <article key={location.city} className="group relative rounded-[24px] border border-[#D4E2D7] bg-[#FFFDFC] p-7 transition duration-300 hover:border-[#87A58E] sm:p-8">
+        <span aria-hidden="true" className="absolute right-7 top-6 text-5xl font-light tracking-[-0.04em] text-[#E5EEE5]">{location.number}</span>
+        <Icon name="pin" className="h-7 w-7 text-[#526F5E]" /><p className="mt-5 text-xs text-[#69766F]">{location.note}</p><h3 className="mt-2 text-2xl font-medium tracking-[-0.03em] text-[#21493B]">{location.name}</h3><address className="mt-4 max-w-[350px] text-sm not-italic leading-6 text-[#69766F]">{location.address}</address><p className="mt-3 flex items-center gap-2 text-sm text-[#526F5E]"><Icon name="clock" className="h-4 w-4" />{location.hours}</p>
+        <button type="button" onClick={() => notify(`Địa điểm ${location.city} là nội dung demo. Chỉ đường sẽ được bổ sung khi địa chỉ được xác minh.`)} className="mt-6 inline-flex min-h-11 items-center gap-3 border-b border-[#87A58E] text-sm font-medium text-[#315C4A] transition hover:gap-5">Xem chỉ đường <Icon name="arrow" className="h-4 w-4" /></button>
+      </article>)}
+    </div><p className="mt-5 text-xs leading-6 text-[#69766F]">Địa điểm và giờ mở cửa là nội dung demo, chưa được xác minh.</p>
+  </section>;
+}
+
+function Footer({ notify }: { notify: (message: string) => void }) {
+  const demoContact = () => notify('Thông tin liên hệ là nội dung demo. Các kênh chính thức sẽ được cập nhật khi website đi vào hoạt động.');
+  return <footer id="contact" className="bg-[#EEF4EF] px-5 pt-16 pb-28 sm:px-8 sm:pb-12">
+    <div className="mx-auto max-w-[1216px]">
+      <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_.8fr_1fr_1fr] lg:gap-12">
+        <div><Brand /><p className="mt-5 max-w-[270px] text-sm leading-7 text-[#69766F]">Một khoảng thở xanh giữa thành phố.<br />Cà phê ngon. Trà thơm. Và bạn.</p><LeafSprig className="mt-5 h-20 w-16 rotate-[45deg] text-[#87A58E]" /></div>
+        <div><h3 className="text-sm font-semibold text-[#315C4A]">Khám phá</h3><nav aria-label="Điều hướng cuối trang" className="mt-5 flex flex-col items-start gap-3">{NAV.slice(0, 4).map((link) => <a key={link.href} href={link.href} className="text-sm leading-6 text-[#69766F] transition hover:text-[#21493B] hover:underline hover:underline-offset-4">{link.text}</a>)}</nav></div>
+        <div><h3 className="text-sm font-semibold text-[#315C4A]">Giờ mở cửa</h3><p className="mt-5 text-sm leading-7 text-[#69766F]">Thứ Hai — Chủ Nhật<br /><span className="text-[#315C4A]">07:00 — 22:30</span></p><p className="mt-3 text-xs leading-6 text-[#69766F]">Riêng Sài Gòn, đến 23:00.<br />Ngày nào cũng có chút xanh.</p></div>
+        <div><h3 className="text-sm font-semibold text-[#315C4A]">Kết nối với Chuồn Chuồn</h3><div className="mt-4 flex flex-col items-start"><button type="button" onClick={demoContact} className="inline-flex min-h-11 items-center gap-2 text-sm text-[#526F5E] hover:underline"><Icon name="mail" className="h-4 w-4 shrink-0" />hello@chuonchuon.cafe</button><button type="button" onClick={demoContact} className="inline-flex min-h-11 items-center gap-2 text-sm text-[#526F5E] hover:underline"><Icon name="phone" className="h-4 w-4" />090 123 4567</button></div><div className="mt-3 flex gap-5">{['Instagram', 'Facebook'].map((label) => <button type="button" key={label} onClick={demoContact} className="min-h-11 text-xs text-[#315C4A] underline decoration-[#87A58E] underline-offset-4">{label}</button>)}</div><p className="mt-2 text-[11px] text-[#69766F]">Thông tin liên hệ minh họa.</p></div>
+      </div>
+      <div className="mt-10 flex flex-col gap-4 border-t border-[#D4E2D7] pt-7 text-[11px] text-[#69766F] sm:flex-row sm:items-center sm:justify-between sm:pr-16"><p>© 2026 Chuồn Chuồn Botanical Coffee & Tea.</p><p className="flex items-center gap-2">Made slowly, served warmly. <DragonflyMark className="h-7 w-7 text-[#526F5E]" /></p></div>
+    </div>
+  </footer>;
+}
+
+function GardenChat() {
+  const { state, open } = useCoze();
+  const [visible, setVisible] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!visible) return;
+    closeRef.current?.focus();
+    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') { setVisible(false); buttonRef.current?.focus(); } };
+    const outside = (event: PointerEvent) => { if (event.target instanceof Node && !containerRef.current?.contains(event.target)) setVisible(false); };
+    document.addEventListener('keydown', close);
+    document.addEventListener('pointerdown', outside);
+    return () => { document.removeEventListener('keydown', close); document.removeEventListener('pointerdown', outside); };
+  }, [visible]);
+  return <div ref={containerRef} className="fixed bottom-5 right-5 z-[70] sm:bottom-6 sm:right-6" style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+    {visible && <section id="garden-chat-panel" aria-labelledby="chat-title" className="cc-appear absolute bottom-[78px] right-0 w-[min(340px,calc(100vw-40px))] rounded-[24px] border border-[#D4E2D7] bg-[#FFFDFC] p-6 shadow-[0_16px_60px_rgba(33,73,59,0.15)]">
+      <div className="flex items-start justify-between gap-3"><Icon name="chat" className="h-8 w-8 text-[#315C4A]" /><button ref={closeRef} type="button" aria-label="Đóng thông báo trợ lý" onClick={() => { setVisible(false); buttonRef.current?.focus(); }} className="-mr-2 -mt-2 flex h-10 w-10 items-center justify-center rounded-full text-[#69766F] hover:bg-[#F1F6F0]"><Icon name="close" className="h-5 w-5" /></button></div>
+      <h2 id="chat-title" className="mt-4 text-lg font-medium text-[#21493B]">Hỏi Chuồn Chuồn</h2><p className="mt-3 text-sm leading-6 text-[#69766F]">{state === 'loading' ? 'Trợ lý đang kết nối. Bạn thử lại sau một chút nhé.' : state === 'unavailable' ? 'Trợ lý tạm thời chưa kết nối được. Bạn vẫn có thể xem thực đơn và ghé thăm khu vườn.' : 'Trợ lý khu vườn sẽ sớm được bật. Trong lúc chờ, mời bạn ghé xem thực đơn nhé.'}</p><a href="#menu" onClick={() => setVisible(false)} className="mt-5 inline-flex min-h-11 items-center gap-3 text-sm font-medium text-[#315C4A]">Khám phá thực đơn <Icon name="arrow" className="h-4 w-4" /></a>
+    </section>}
+    <div className="group relative"><span aria-hidden="true" className="pointer-events-none absolute right-[76px] top-3 hidden whitespace-nowrap rounded-full border border-[#D4E2D7] bg-[#FFFDFC] px-4 py-2 text-xs text-[#315C4A] opacity-0 shadow-sm transition group-hover:opacity-100 group-focus-within:opacity-100 sm:block">Hỏi Chuồn Chuồn</span><button ref={buttonRef} type="button" aria-label="Hỏi Chuồn Chuồn" aria-expanded={visible} aria-controls={visible ? 'garden-chat-panel' : undefined} onClick={() => { if (visible) setVisible(false); else if (!open()) setVisible(true); }} className="flex h-[60px] w-[60px] items-center justify-center rounded-full bg-[#315C4A] text-white shadow-[0_12px_35px_rgba(33,73,59,0.22)] ring-4 ring-[#E5EEE5]/80 transition duration-300 hover:scale-105 hover:bg-[#21493B] active:scale-95"><Icon name={visible ? 'close' : 'chat'} className="h-7 w-7" /></button></div>
+  </div>;
+}
+
+export default function Page() {
+  const [notice, setNotice] = useState('');
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(''), 9000);
+    return () => clearTimeout(timer);
+  }, [notice]);
+  return <div id="top" lang="vi" className="cc-site min-h-screen bg-[#FAF8F5] text-[#203129] antialiased">
+    <style jsx global>{`
+      html { scroll-behavior: smooth; scroll-padding-top: 110px; }
+      body { margin: 0; }
+      .cc-site { font-family: "Segoe UI Variable", "Segoe UI", "SF Pro Display", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif; color-scheme: light; }
+      .cc-site *, .cc-site *::before, .cc-site *::after { box-sizing: border-box; }
+      .cc-site section, .cc-site footer { scroll-margin-top: 24px; }
+      .cc-site ::selection { background: #c8d9c9; color: #203129; }
+      .cc-site button { cursor: pointer; }
+      .cc-site :where(a, button, input, select, [tabindex]):focus-visible { outline: 2px solid #315c4a; outline-offset: 5px; }
+      .cc-site img { display: block; }
+      .cc-nav { position: relative; }
+      .cc-nav::after { content: ''; position: absolute; bottom: 5px; left: 0; width: 100%; height: 1px; background: #87a58e; transform: scaleX(0); transform-origin: left; transition: transform .25s ease; }
+      .cc-nav:hover::after, .cc-nav:focus-visible::after { transform: scaleX(1); }
+      .cc-appear { animation: cc-appear .35s ease both; }
+      .cc-float { animation: cc-float 8s ease-in-out infinite; }
+      @keyframes cc-appear { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+      @keyframes cc-float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -8px; } }
+      @media (prefers-reduced-motion: reduce) {
+        html { scroll-behavior: auto !important; }
+        .cc-site *, .cc-site *::before, .cc-site *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+      }
+      @media (forced-colors: active) { .cc-site button, .cc-site input, .cc-site select { border: 1px solid ButtonText; } }
+    `}</style>
+    <a href="#main-content" className="sr-only z-[100] rounded-full bg-[#315C4A] px-6 py-3 text-white focus:not-sr-only focus:fixed focus:left-5 focus:top-5">Đến nội dung chính</a>
+    <Header />
+    <main id="main-content" tabIndex={-1}>
+      <Hero />
+      <Story />
+      <Garden />
+      <MenuSection />
+      <div aria-hidden="true" className="mx-auto flex max-w-[750px] items-center justify-center gap-5 px-8 pb-16 text-[#87A58E]"><span className="h-px flex-1 bg-[#D4E2D7]" /><LeafSprig className="h-16 w-12 rotate-[55deg]" /><span className="text-xs tracking-[0.17em] text-[#69766F]">stay awhile</span><DragonflyMark className="h-12 w-12" /><span className="h-px flex-1 bg-[#D4E2D7]" /></div>
+      <Reservation />
+      <Locations notify={setNotice} />
+    </main>
+    <Footer notify={setNotice} />
+    <div role="status" aria-live="polite" aria-atomic="true">{notice && <div className="cc-appear fixed bottom-24 left-5 right-5 z-[75] mx-auto flex max-w-[520px] items-start gap-4 rounded-2xl border border-[#D4E2D7] bg-[#FFFDFC] p-5 text-sm leading-6 text-[#315C4A] shadow-[0_10px_40px_rgba(33,73,59,0.15)] sm:bottom-7"><Icon name="leaf" className="mt-1 h-5 w-5 shrink-0" /><p className="flex-1">{notice}</p><button type="button" onClick={() => setNotice('')} aria-label="Đóng thông báo" className="-mr-2 -mt-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full hover:bg-[#F1F6F0]"><Icon name="close" className="h-4 w-4" /></button></div>}</div>
+    <GardenChat />
+  </div>;
 }
