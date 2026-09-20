@@ -32,6 +32,23 @@ declare global {
   }
 }
 
+const COZE_USER_ID_STORAGE_KEY = 'chuon-chuon-coze-user-id';
+
+function getOrCreateCozeUserId(): string {
+  if (typeof window === 'undefined') return 'chuon-chuon-web-user';
+
+  const existing = window.localStorage.getItem(COZE_USER_ID_STORAGE_KEY);
+  if (existing) return existing;
+
+  const generated =
+    typeof window.crypto?.randomUUID === 'function'
+      ? `chuon-chuon-${window.crypto.randomUUID()}`
+      : `chuon-chuon-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+  window.localStorage.setItem(COZE_USER_ID_STORAGE_KEY, generated);
+  return generated;
+}
+
 function createCozeOptions(): Record<string, unknown> {
   // Isolated adapter matching Coze Web SDK 1.2.0-beta.6 installation syntax.
   return {
@@ -46,7 +63,7 @@ function createCozeOptions(): Record<string, unknown> {
       onRefreshToken: async () => COZE_CONFIG.token,
     },
     userInfo: {
-      id: 'chuon-chuon-web-user',
+      id: getOrCreateCozeUserId(),
       url: 'https://sf-coze-web-cdn.coze.com/obj/eden-sg/lm-lgvj/ljhwZthlaukjlkulzlp/coze/coze-logo.png',
       nickname: 'User',
     },
