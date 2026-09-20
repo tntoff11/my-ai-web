@@ -62,13 +62,13 @@ function createCozeOptions(): Record<string, unknown> {
         isNeedClose: true,
       },
       asstBtn: {
-        isNeed: true,
+        isNeed: false,
       },
       footer: {
         isShow: false,
       },
       chatBot: {
-        title: 'Coze Bot',
+        title: 'Chuồn Chuồn Coffee & Bistro',
         uploadable: true,
         width: 390,
       },
@@ -516,7 +516,7 @@ function GardenChat() {
       <div className="flex items-start justify-between gap-3"><Icon name="chat" className="h-8 w-8 text-[#315C4A]" /><button ref={closeRef} type="button" aria-label="Đóng thông báo trợ lý" onClick={() => { setVisible(false); buttonRef.current?.focus(); }} className="-mr-2 -mt-2 flex h-10 w-10 items-center justify-center rounded-full text-[#69766F] hover:bg-[#F1F6F0]"><Icon name="close" className="h-5 w-5" /></button></div>
       <h2 id="chat-title" className="mt-4 text-lg font-medium text-[#21493B]">Hỏi Chuồn Chuồn</h2><p className="mt-3 text-sm leading-6 text-[#69766F]">{state === 'loading' ? 'Trợ lý đang kết nối. Bạn thử lại sau một chút nhé.' : state === 'unavailable' ? 'Trợ lý tạm thời chưa kết nối được. Bạn vẫn có thể xem thực đơn và ghé thăm khu vườn.' : 'Trợ lý khu vườn sẽ sớm được bật. Trong lúc chờ, mời bạn ghé xem thực đơn nhé.'}</p><a href="#menu" onClick={() => setVisible(false)} className="mt-5 inline-flex min-h-11 items-center gap-3 text-sm font-medium text-[#315C4A]">Khám phá thực đơn <Icon name="arrow" className="h-4 w-4" /></a>
     </section>}
-    <div className="group relative"><span aria-hidden="true" className="pointer-events-none absolute right-[76px] top-3 hidden whitespace-nowrap rounded-full border border-[#D4E2D7] bg-[#FFFDFC] px-4 py-2 text-xs text-[#315C4A] opacity-0 shadow-sm transition group-hover:opacity-100 group-focus-within:opacity-100 sm:block">Hỏi Chuồn Chuồn</span><button ref={buttonRef} type="button" aria-label="Hỏi Chuồn Chuồn" aria-expanded={visible} aria-controls={visible ? 'garden-chat-panel' : undefined} onClick={() => { if (visible) setVisible(false); else if (!open()) setVisible(true); }} className="flex h-[60px] w-[60px] items-center justify-center rounded-full bg-[#315C4A] text-white shadow-[0_12px_35px_rgba(33,73,59,0.22)] ring-4 ring-[#E5EEE5]/80 transition duration-300 hover:scale-105 hover:bg-[#21493B] active:scale-95"><Icon name={visible ? 'close' : 'chat'} className="h-7 w-7" /></button></div>
+    <div className="relative"><span aria-hidden="true" className="pointer-events-none absolute right-[76px] top-3 whitespace-nowrap rounded-full border border-[#D4E2D7] bg-[#FFFDFC] px-4 py-2 text-xs text-[#315C4A] shadow-sm">Bạn cần giúp đỡ gì không?</span><button ref={buttonRef} type="button" aria-label="Hỏi Chuồn Chuồn" aria-expanded={visible} aria-controls={visible ? 'garden-chat-panel' : undefined} onClick={() => { if (visible) setVisible(false); else if (!open()) setVisible(true); }} className="flex h-[60px] w-[60px] items-center justify-center rounded-full bg-[#315C4A] text-white shadow-[0_12px_35px_rgba(33,73,59,0.22)] ring-4 ring-[#E5EEE5]/80 transition duration-300 hover:scale-105 hover:bg-[#21493B] active:scale-95"><Icon name="leaf" className="h-7 w-7" /></button></div>
   </div>;
 }
 
