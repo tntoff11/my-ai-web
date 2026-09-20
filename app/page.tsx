@@ -35,9 +35,44 @@ declare global {
 function createCozeOptions(): Record<string, unknown> {
   // Isolated adapter matching Coze Web SDK 1.2.0-beta.6 installation syntax.
   return {
-    config: { bot_id: COZE_CONFIG.botId },
-    componentProps: { title: 'Coze' },
-    auth: { type: 'token', token: COZE_CONFIG.token, onRefreshToken: async () => COZE_CONFIG.token },
+    config: {
+      type: 'bot',
+      bot_id: COZE_CONFIG.botId,
+      isIframe: false,
+    },
+    auth: {
+      type: 'token',
+      token: COZE_CONFIG.token,
+      onRefreshToken: async () => COZE_CONFIG.token,
+    },
+    userInfo: {
+      id: 'chuon-chuon-web-user',
+      url: 'https://sf-coze-web-cdn.coze.com/obj/eden-sg/lm-lgvj/ljhwZthlaukjlkulzlp/coze/coze-logo.png',
+      nickname: 'User',
+    },
+    ui: {
+      base: {
+        icon: 'https://sf-coze-web-cdn.coze.com/obj/eden-sg/lm-lgvj/ljhwZthlaukjlkulzlp/coze/chatsdk-logo.png',
+        layout: 'pc',
+        lang: 'en',
+        zIndex: 1000,
+      },
+      header: {
+        isShow: true,
+        isNeedClose: true,
+      },
+      asstBtn: {
+        isNeed: true,
+      },
+      footer: {
+        isShow: false,
+      },
+      chatBot: {
+        title: 'Coze Bot',
+        uploadable: true,
+        width: 390,
+      },
+    },
   };
 }
 
