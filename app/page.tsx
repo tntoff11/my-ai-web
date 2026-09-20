@@ -12,10 +12,10 @@ import type { FormEvent, ReactNode, SVGProps } from 'react';
  * Reference: https://www.coze.com/open/docs/developer_guides/web_sdk
  */
 const COZE_CONFIG: { enabled: boolean; sdkUrl: string; botId: string; token: string } = {
-  enabled: false,
-  sdkUrl: '',
-  botId: '',
-  token: '',
+  enabled: true,
+  sdkUrl: 'https://sf-cdn.coze.com/obj/unpkg-va/flow-platform/chat-app-sdk/1.2.0-beta.6/libs/oversea/index.js',
+  botId: '7685978136609603637',
+  token: 'pat_gqNrVjGcMDMpXLpQJ32R75llohXbgDDZXMDDwGbvExvb4PXAJMxx91FysHC6wFu0',
 };
 
 type CozeChatClientInstance = {
@@ -33,10 +33,10 @@ declare global {
 }
 
 function createCozeOptions(): Record<string, unknown> {
-  // Isolated adapter for the installation pattern supplied in the specification.
-  // If your published SDK uses botId rather than bot_id, change this adapter.
+  // Isolated adapter matching Coze Web SDK 1.2.0-beta.6 installation syntax.
   return {
-    config: { bot_id: COZE_CONFIG.botId, isIframe: false },
+    config: { bot_id: COZE_CONFIG.botId },
+    componentProps: { title: 'Chuồn Chuồn Garden Concierge' },
     auth: { type: 'token', token: COZE_CONFIG.token, onRefreshToken: async () => COZE_CONFIG.token },
     ui: {
       base: { layout: 'pc', zIndex: 80 },
