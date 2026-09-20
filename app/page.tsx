@@ -36,13 +36,8 @@ function createCozeOptions(): Record<string, unknown> {
   // Isolated adapter matching Coze Web SDK 1.2.0-beta.6 installation syntax.
   return {
     config: { bot_id: COZE_CONFIG.botId },
-    componentProps: { title: 'Chuồn Chuồn Garden Concierge' },
+    componentProps: { title: 'Coze' },
     auth: { type: 'token', token: COZE_CONFIG.token, onRefreshToken: async () => COZE_CONFIG.token },
-    ui: {
-      base: { layout: 'pc', zIndex: 80 },
-      asstBtn: { isNeed: false },
-      chatBot: { title: 'Chuồn Chuồn Garden Concierge', uploadable: false },
-    },
   };
 }
 
