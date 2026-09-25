@@ -4,14 +4,10 @@ import { useEffect, useRef, useState } from 'react';
 import type { FormEvent, ReactNode, SVGProps } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { PHOTO, MAP, PHONE, EMAIL, NAV, EXPERIENCES, QUESTIONS } from './content';
 
-/* COZE INTEGRATION — deliberately disabled until configured.
- * Paste the exact CDN URL from Coze → Publish → Web SDK → Installation.
- * Match createCozeOptions to that SDK version's installation snippet.
- * This is a client-side demo: anything placed here is public in the JS bundle.
- * Never put a production secret here. Production authentication should use a
- * server-issued, short-lived credential supported by the selected SDK version.
- * Reference: https://www.coze.com/open/docs/developer_guides/web_sdk
+/* Existing Coze integration: SDK configuration and per-browser user identity
+ * are preserved from the working project.
  */
 const COZE_CONFIG: { enabled: boolean; sdkUrl: string; botId: string; token: string } = {
   enabled: true,
@@ -199,176 +195,6 @@ function SymbolIcon({ name, size = 20, className = '' }: { name: SymbolName; siz
   return <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
 
-const ROOT = '/images/chuon-chuon/';
-const PHOTO = {
-  hero: ROOT + 'cau-vuon-hoa-tren-cao.jpg',
-  flowers: ROOT + 'toan-canh-vuon-hoa.jpg',
-  family: ROOT + 'gia-dinh-vuon-hoa.jpg',
-  bridge: ROOT + 'cau-check-in.jpg',
-  animal: ROOT + 'gia-dinh-vuon-thu.jpg',
-  lamb: ROOT + 'cuu-va-du-khach.jpg',
-  child: ROOT + 'em-be-vuon-thu.jpg',
-  lake: ROOT + 'dap-xe-tren-nuoc.jpg',
-  cafe: ROOT + 'khong-gian-am-thuc.jpg',
-  path: ROOT + 'loi-di-giua-vuon-hoa.jpg',
-  mini: ROOT + 'tieu-canh-nha-tren-cay.jpg',
-  sign: ROOT + 'cau-chuon-chuon-thumbnail.jpg',
-  campaign1: ROOT + 'anh-chien-dich-khu-vui-choi.jpg',
-  campaign2: ROOT + 'anh-chien-dich-check-in.jpg',
-} as const;
-const MAP = 'https://maps.app.goo.gl/wrVAJHmaF4rPXgvEA';
-const PHONE = 'tel:+84702882299';
-const EMAIL = 'mailto:kinhdoanh.chuonchuon@gmail.com';
-const NAV = [
-  { href: '/trai-nghiem', label: 'Trải nghiệm' },
-  { href: '/gia-ve', label: 'Giá vé' },
-  { href: '/len-ke-hoach', label: 'Lên kế hoạch' },
-  { href: '/duong-di', label: 'Đường đi' },
-  { href: '/khach-doan', label: 'Khách đoàn' },
-];
-
-function Wordmark({ light = false }: { light?: boolean }) {
-  return <Link href="/" className={`wordmark ${light ? 'wordmark-light' : ''}`} aria-label="Chuồn Chuồn Coffee & Bistro - Về trang chủ">
-    <span className="logo-source"><img src="/images/chuon-chuon/logo-coffee-bistro.png" alt="Biểu trưng Chuồn Chuồn Coffee & Bistro" /></span>
-    <span className="wordmark-text"><strong>Chuồn Chuồn</strong><small>COFFEE & BISTRO</small></span>
-  </Link>;
-}
-
-export function usePageMotion() {
-  const rootRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const reveals = Array.from(root.querySelectorAll<HTMLElement>('[data-reveal]'));
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) { entry.target.classList.add('is-visible'); io.unobserve(entry.target); }
-      });
-    }, { threshold: 0.12, rootMargin: '0px 0px -28px 0px' });
-    if (!reduce) { root.classList.add('motion-ready'); reveals.forEach(el => io.observe(el)); }
-    let frame = 0;
-    const update = () => {
-      frame = 0;
-      const max = document.documentElement.scrollHeight - window.innerHeight;
-      const p = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
-      root.style.setProperty('--page-progress', String(p));
-      root.style.setProperty('--hero-scroll', `${Math.min(220, Math.max(0, window.scrollY * 0.23))}px`);
-    };
-    const onScroll = () => { if (!frame) frame = requestAnimationFrame(update); };
-    update();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll);
-    return () => { io.disconnect(); if (frame) cancelAnimationFrame(frame); window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); };
-  }, []);
-  return rootRef;
-}
-
-export function Header() {
-  const [open, setOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-  const pathname = usePathname();
-  useEffect(() => {
-    const update = () => setScrolled(window.scrollY > 50);
-    update(); window.addEventListener('scroll', update, { passive: true });
-    return () => window.removeEventListener('scroll', update);
-  }, []);
-  useEffect(() => { if (!open) return; const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false); }; document.addEventListener('keydown', onKey); return () => document.removeEventListener('keydown', onKey); }, [open]);
-  return <header className={`site-header ${scrolled || open ? 'header-solid' : ''}`}>
-    <div className="header-inner"><Wordmark /><nav className="desktop-nav" aria-label="Điều hướng chính">{NAV.map(item => <Link href={item.href} key={item.href} aria-current={pathname === item.href ? 'page' : undefined}>{item.label}</Link>)}</nav>
-      <a className="nav-map" href={MAP} target="_blank" rel="noopener noreferrer"><SymbolIcon name="pin" size={17} /> Chỉ đường <SymbolIcon name="arrow" size={16} /></a>
-      <button className="mobile-toggle" type="button" aria-label={open ? 'Đóng menu' : 'Mở menu'} aria-expanded={open} aria-controls="mobile-navigation" onClick={() => setOpen(v => !v)}><SymbolIcon name={open ? 'close' : 'menu'} size={25} /></button>
-    </div>
-    {open && <nav className="mobile-nav" id="mobile-navigation" aria-label="Điều hướng di động">{NAV.map((item) => <Link href={item.href} key={item.href} aria-current={pathname === item.href ? 'page' : undefined} onClick={() => setOpen(false)}>{item.label}<SymbolIcon name="arrow" size={19} /></Link>)}<a href={MAP} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)}>Mở Google Maps <SymbolIcon name="arrow" size={19} /></a></nav>}
-  </header>;
-}
-
-export function Hero() {
-  return <section className="hero" id="dau-trang" aria-labelledby="hero-title">
-    <div className="hero-photo"><img src={PHOTO.hero} alt="Lối đi uốn lượn giữa những dải hoa tím tại Chuồn Chuồn" fetchPriority="high" /></div><div className="hero-wash" />
-    <div className="hero-content"><div className="hero-kicker"><span className="pulse-dot" /> MỘT NGÀY THẬT KHÁC · NAM BAN, LÂM ĐỒNG</div>
-      <h1 id="hero-title">Đi theo<br /><em>lối vui.</em></h1>
-      <p>Giữa đồi xanh và những con đường ngập hoa, mỗi khúc quanh lại mở ra một trải nghiệm mới.</p>
-      <div className="hero-actions"><a className="button button-light" href="/trai-nghiem">Bắt đầu khám phá <SymbolIcon name="arrow" size={19} /></a><a className="hero-link" href="/gia-ve">Xem giá vé <span>↗</span></a></div>
-    </div>
-    <div className="hero-index" aria-hidden="true">CHUỒN CHUỒN</div>
-    <a href="/#gioi-thieu" className="hero-scroll" aria-label="Cuộn xuống tìm hiểu"><span>CUỘN ĐỂ KHÁM PHÁ</span><SymbolIcon name="down" size={17} /></a>
-    <div className="hero-bottom"><div><SymbolIcon name="clock" size={18} /> 07:30 — 17:00 · HẰNG NGÀY</div><div><SymbolIcon name="pin" size={18} /> NAM BAN, LÂM ĐỒNG</div><span>KHÁM PHÁ THEO CÁCH CỦA BẠN</span></div>
-  </section>;
-}
-
-export function Intro() {
-  return <section className="intro section-shell" id="gioi-thieu"><div className="intro-topline"><span>LỜI CHÀO TỪ CHUỒN CHUỒN</span><span>ĐIỂM DU LỊCH · THIÊN NHIÊN · TRẢI NGHIỆM</span></div>
-    <div className="intro-grid"><div className="intro-side" data-reveal><span className="big-sun" aria-hidden="true"><BotanicalBurst /></span><span>MỘT KHOẢNG TRỜI CHO MỌI NGƯỜI</span></div>
-      <div data-reveal><h2>Chuyến đi đẹp nhất<br />là chuyến đi <em>có điều để nhớ.</em></h2><p>Điểm Du Lịch Chuồn Chuồn là nơi tham quan, vui chơi và check-in giữa thiên nhiên Lâm Đồng. Từ vườn hoa, khu thú mini đến những trò chơi ngoài trời, mỗi người đều có thể chọn cho mình một nhịp khám phá riêng.</p><a href="/trai-nghiem" className="text-link">Theo dấu những trải nghiệm <SymbolIcon name="arrow" size={20} /></a></div></div>
-    <div className="intro-photo-grid"><figure className="intro-picture intro-picture-a" data-reveal><img src={PHOTO.family} alt="Gia đình dạo trên lối gỗ giữa khu vườn hoa" loading="lazy" /><figcaption>Cùng nhau đi dạo</figcaption></figure><figure className="intro-picture intro-picture-b" data-reveal><img src={PHOTO.path} alt="Lối đi uốn lượn giữa những khóm hoa tím" loading="lazy" /><figcaption>Rẽ vào một mùa hoa</figcaption></figure><figure className="intro-picture intro-picture-c" data-reveal><img src={PHOTO.mini} alt="Tiểu cảnh những ngôi nhà nhỏ trong khu vườn" loading="lazy" /><figcaption>Gặp điều bất ngờ</figcaption></figure></div>
-  </section>;
-}
-
-const EXPERIENCES = [
-  { no: '01', title: 'Lạc giữa vườn hoa', type: 'CẢNH QUAN & CHECK-IN', image: PHOTO.flowers, alt: 'Toàn cảnh vườn hoa tím trên sườn đồi', desc: 'Đi chậm qua những lối hoa, tìm góc ảnh của riêng bạn. Cảnh quan hoa thay đổi theo mùa và điều kiện thực tế.' },
-  { no: '02', title: 'Ghé thăm vườn thú mini', type: 'GIA ĐÌNH & KHÁM PHÁ', image: PHOTO.animal, alt: 'Gia đình tương tác với những chú cừu tại vườn thú mini', desc: 'Một điểm dừng thân thiện cho cả nhà. Thức ăn chuyên dụng để cho thú ăn được thanh toán riêng.' },
-  { no: '03', title: 'Đạp xe trên nước', type: 'VẬN ĐỘNG & THƯ GIÃN', image: PHOTO.lake, alt: 'Du khách đạp xe trên mặt hồ giữa cây xanh', desc: 'Đổi góc nhìn về khu vườn từ mặt hồ. Hoạt động có thể tạm dừng khi thời tiết không an toàn.' },
-  { no: '04', title: 'Chạm vào tầng mây', type: 'THÁP VỌNG CẢNH & CẦU KÍNH', image: PHOTO.bridge, alt: 'Cầu và công trình tham quan trên cao tại Chuồn Chuồn', desc: 'Ngắm đồi xanh từ trên cao và ghi lại những khung hình thật khác ở các điểm check-in.' },
-  { no: '05', title: 'Dừng chân, nhìn xa', type: 'ẨM THỰC & NGHỈ NGƠI', image: PHOTO.cafe, alt: 'Không gian bàn ghế ngoài trời nhìn ra cảnh quan', desc: 'Một nhà hàng chính và các điểm phục vụ đồ uống để nghỉ chân giữa hành trình. Ăn uống thanh toán riêng.' },
-];
-export function Experiences() {
-  const railRef = useRef<HTMLDivElement>(null);
-  const step = (direction: number) => railRef.current?.scrollBy({ left: direction * Math.min(480, railRef.current.clientWidth * .85), behavior: 'smooth' });
-  return <section className="experiences" id="trai-nghiem" aria-labelledby="experience-title"><div className="section-shell experiences-inner"><div className="section-heading" data-reveal><span className="eyebrow">HÀNH TRÌNH TRẢI NGHIỆM</span><div className="heading-row"><h2 id="experience-title">Có một <em>lối vui</em><br />dành cho bạn.</h2><p>Khám phá những mảnh ghép của Chuồn Chuồn. Mỗi điểm dừng là một lý do để ở lại thêm một chút.</p></div></div>
-    <div className="rail-head"><span>KÉO NGANG ĐỂ KHÁM PHÁ <SymbolIcon name="arrow" size={17} /></span><div className="rail-buttons"><button type="button" aria-label="Xem trải nghiệm trước" onClick={() => step(-1)}><SymbolIcon name="arrow" size={20} className="flip" /></button><button type="button" aria-label="Xem trải nghiệm tiếp theo" onClick={() => step(1)}><SymbolIcon name="arrow" size={20} /></button></div></div></div>
-    <div className="experience-rail" ref={railRef} tabIndex={0} aria-label="Danh sách trải nghiệm, cuộn ngang để xem thêm">{EXPERIENCES.map((item) => <article className="experience-card" key={item.no}><div className="experience-image"><img src={item.image} alt={item.alt} loading="lazy" /></div><div className="experience-info"><span>{item.type}</span><h3>{item.title}</h3><p>{item.desc}</p></div></article>)}</div>
-    <div className="section-shell experience-note">Vé tham quan còn bao gồm Sky Line, trượt phao khô 7 sắc cầu vồng và xích đu ngắm cảnh. <a href="/len-ke-hoach#luu-y">Xem lưu ý tham gia <SymbolIcon name="arrow" size={16} /></a></div>
-  </section>;
-}
-
-export function Momentum() {
-  return <section className="momentum" aria-label="Khoảnh khắc tại Chuồn Chuồn"><div className="momentum-image"><img src={PHOTO.bridge} alt="Cầu tham quan với tầm nhìn ra đồi xanh tại Chuồn Chuồn" loading="lazy" /></div><div className="momentum-overlay" /><div className="momentum-content" data-reveal><span className="eyebrow">GIỮ LẠI MỘT KHOẢNH KHẮC</span><p>Đổi một lối rẽ.<br /><em>Mở cả một chân trời.</em></p><a href="/trai-nghiem#bo-suu-tap" className="button button-outline-light">Xem những góc hình <SymbolIcon name="arrow" size={19} /></a></div><span className="momentum-corner">CHUỒN CHUỒN / LÂM ĐỒNG</span></section>;
-}
-
-export function Tickets() {
-  return <section className="tickets section-shell" id="gia-ve" aria-labelledby="ticket-title"><div className="ticket-intro" data-reveal><span className="eyebrow">THÔNG TIN VÉ</span><h2 id="ticket-title">Một tấm vé.<br /><em>Rất nhiều niềm vui.</em></h2><p>Chọn loại vé theo chiều cao thực tế. Giá đã bao gồm VAT và áp dụng như nhau vào ngày thường, cuối tuần và dịp lễ.</p><div className="ticket-stamp"><SymbolIcon name="ticket" size={22} /> MUA VÉ TRỰC TIẾP TẠI ĐIỂM</div></div>
-    <div className="ticket-stack" data-reveal><article className="ticket-card ticket-adult"><div className="ticket-card-top"><span>VÉ THAM QUAN</span><span>NGƯỜI LỚN</span></div><div className="ticket-price"><strong>120.000</strong><span>đ / khách</span></div><p>Khách cao trên 1m4</p><span className="ticket-pattern" aria-hidden="true"><BotanicalBurst /></span></article>
-      <article className="ticket-card ticket-child"><div className="ticket-card-top"><span>VÉ THAM QUAN</span><span>TRẺ EM</span></div><div className="ticket-price"><strong>80.000</strong><span>đ / khách</span></div><p>Từ 1m đến 1m4 · dưới 1m miễn phí</p><span className="ticket-pattern" aria-hidden="true"><BotanicalBurst /></span></article></div>
-    <div className="ticket-details"><div><span className="detail-circle"><SymbolIcon name="spark" size={22} /></span><div><h3>Đã gồm trong vé</h3><p>Tham quan, check-in vườn hoa, vườn thú mini, đạp xe trên nước, xích đu ngắm cảnh, Sky Line và trượt phao khô.</p></div></div><div><span className="detail-circle"><SymbolIcon name="sun" size={22} /></span><div><h3>Chi phí riêng</h3><p>Đồ ăn, thức uống tại các điểm ẩm thực và thức ăn chuyên dụng cho thú được thanh toán riêng.</p></div></div></div>
-  </section>;
-}
-
-const GALLERY = [
-  { image: PHOTO.lamb, alt: 'Du khách cho đàn cừu ăn', note: 'Gặp gỡ những người bạn nhỏ', cls: 'g1' },
-  { image: PHOTO.child, alt: 'Em bé vui chơi gần những chú cừu', note: 'Chuyến đi của cả gia đình', cls: 'g2' },
-  { image: PHOTO.sign, alt: 'Cầu cong với biển Chuồn Chuồn Đà Lạt', note: 'Một góc Chuồn Chuồn', cls: 'g3' },
-  { image: PHOTO.campaign1, alt: 'Ảnh thiết kế khu vui chơi Chuồn Chuồn', note: 'Khoảnh khắc vui chơi', cls: 'g4' },
-  { image: PHOTO.campaign2, alt: 'Ảnh thiết kế nhóm du khách check-in tại Chuồn Chuồn', note: 'Đi cùng nhau, vui cùng nhau', cls: 'g5' },
-];
-export function Gallery() {
-  return <section className="gallery" id="bo-suu-tap" aria-labelledby="gallery-title"><div className="section-shell gallery-heading" data-reveal><div><span className="eyebrow">ALBUM CHUỒN CHUỒN</span><h2 id="gallery-title">Một nơi.<br /><em>Muôn góc nhìn.</em></h2></div><p>Những hình ảnh thật trong bộ tư liệu Chuồn Chuồn. Cảnh quan và tình trạng hoa có thể thay đổi theo mùa.</p></div><div className="gallery-grid section-shell">{GALLERY.map(item => <figure className={`gallery-frame ${item.cls}`} key={item.cls} data-reveal><img src={item.image} alt={item.alt} loading="lazy" /><figcaption>{item.note}</figcaption></figure>)}</div></section>;
-}
-
-export function Plan() {
-  const [faq, setFaq] = useState<number | null>(null);
-  const questions = [
-    { q: 'Trời mưa, các hoạt động có mở không?', a: 'Khu tham quan vẫn có nhà hàng và điểm có mái che. Sky Line, trượt phao khô và đạp xe trên nước có thể tạm dừng khi thời tiết không an toàn. Vui lòng gọi hotline để hỏi tình trạng trong ngày.' },
-    { q: 'Tôi có cần đặt vé trước không?', a: 'Vé được mua trực tiếp tại điểm tham quan; khách lẻ không cần đặt trước. Với khách đoàn, vui lòng liên hệ trước để được chuẩn bị và tư vấn.' },
-    { q: 'Có thể mang xe đẩy hoặc dùng xe lăn không?', a: 'Có thể mang xe đẩy trẻ em, nhưng địa hình đồi có nhiều đoạn dốc. Phần lớn khu tham quan có thể khó tiếp cận đối với người dùng xe lăn; khu nhà hàng thuận tiện hơn.' },
-    { q: 'Có được đổi ngày hoặc hoàn vé vì mưa không?', a: 'Theo thông tin doanh nghiệp cung cấp, vé đã mua không áp dụng đổi ngày hoặc hoàn tiền do mưa hay thời tiết xấu.' },
-  ];
-  return <section className="plan" id="len-ke-hoach" aria-labelledby="plan-title"><div className="section-shell"><div className="plan-heading" data-reveal><span className="eyebrow">TRƯỚC KHI LÊN ĐƯỜNG</span><h2 id="plan-title">Chuẩn bị một chút.<br /><em>Vui trọn cả ngày.</em></h2></div><div className="plan-grid"><div className="plan-lead" data-reveal><img src={PHOTO.path} alt="Lối đi qua hoa tím trên địa hình đồi của Chuồn Chuồn" loading="lazy" /><div><span>HÀNH TRÌNH TRONG KHUÔN VIÊN</span><p>Địa hình đồi có các đoạn dốc. Hãy chọn nhịp di chuyển phù hợp cho người lớn tuổi, gia đình có trẻ nhỏ và người khó di chuyển.</p></div></div><div className="plan-facts" id="luu-y" data-reveal><div className="fact"><span>GIỜ MỞ CỬA</span><strong>07:30 — 17:00</strong><p>Mở cửa hằng ngày, kể cả cuối tuần và ngày lễ. Các khu cùng theo khung giờ chung.</p></div><div className="fact"><span>TRÒ CHƠI CẢM GIÁC MẠNH</span><strong>Trên 1m2</strong><p>Trẻ em cao trên 1m2 có thể tham gia Sky Line và trượt phao khô khi đủ sức khỏe; làm theo hướng dẫn của nhân viên.</p></div><div className="fact"><span>NGHỈ CHÂN & ĂN UỐNG</span><strong>Nhà hàng & quầy nước</strong><p>Có một nhà hàng chính và ba điểm phục vụ đồ uống. Đồ ăn, thức uống được tính riêng ngoài vé.</p></div><div className="fact"><span>TÌNH TRẠNG TRONG NGÀY</span><strong>Hỏi nhân viên</strong><p>Hoa và hoạt động ngoài trời có thể thay đổi. Liên hệ trước nếu bạn cần biết tình trạng thực tế.</p></div></div></div>
-      <div className="faq" aria-labelledby="faq-title"><div className="faq-intro"><span className="eyebrow">CÂU HỎI THƯỜNG GẶP</span><h3 id="faq-title">Bạn còn<br /><em>thắc mắc?</em></h3></div><div className="faq-list">{questions.map((item, index) => <div className="faq-item" key={item.q}><button type="button" aria-expanded={faq === index} aria-controls={`faq-answer-${index}`} onClick={() => setFaq(faq === index ? null : index)}>{item.q}<b aria-hidden="true">{faq === index ? '−' : '+'}</b></button><div id={`faq-answer-${index}`} className={`faq-answer ${faq === index ? 'faq-open' : ''}`} hidden={faq !== index}><p>{item.a}</p></div></div>)}</div></div>
-    </div></section>;
-}
-
-export function Visit() {
-  return <section className="visit" id="duong-di" aria-labelledby="visit-title"><div className="visit-image"><img src={PHOTO.hero} alt="Toàn cảnh lối đi và vườn hoa tại điểm du lịch" loading="lazy" /></div><div className="visit-panel" data-reveal><span className="eyebrow">HẸN GẶP Ở CHUỒN CHUỒN</span><h2 id="visit-title">Lối vui<br /><em>bắt đầu ở đây.</em></h2><div className="visit-address"><SymbolIcon name="pin" size={25} /><div><span>ĐỊA CHỈ</span><p>217 Thôn 5, Nam Ban,<br />Lâm Đồng, Việt Nam</p></div></div><div className="visit-micro"><div><strong>18–20 km</strong><span>Từ trung tâm Đà Lạt</span></div><div><strong>Miễn phí</strong><span>Bãi đỗ xe máy, ô tô, xe đoàn</span></div></div><p className="visit-time">Thời gian từ trung tâm Đà Lạt thường khoảng 30–40 phút, tùy điểm xuất phát và giao thông.</p><a href={MAP} target="_blank" rel="noopener noreferrer" className="button button-dark">Mở Google Maps <SymbolIcon name="arrow" size={19} /></a></div></section>;
-}
-
-export function Groups() {
-  return <section className="groups section-shell" id="khach-doan"><div className="groups-flower" aria-hidden="true"><BotanicalBurst /></div><span className="eyebrow">ĐI CÙNG NHAU, VUI HƠN NỮA</span><h2>Hẹn cả nhóm<br /><em>cùng khám phá.</em></h2><p>Chuồn Chuồn đón tiếp đoàn, trường học và doanh nghiệp. Liên hệ trước để được tư vấn hoạt động, ăn uống và cách chuẩn bị phù hợp cho đoàn của bạn.</p><div className="group-actions"><a className="button button-dark" href={EMAIL}>Gửi yêu cầu tư vấn <SymbolIcon name="arrow" size={18} /></a><a className="group-phone" href={PHONE}><SymbolIcon name="phone" size={18} /> 070 288 2299</a></div><div className="group-small">Hotline có nhân viên tiếp nhận: 08:00 — 17:30</div></section>;
-}
-
-export function Footer() {
-  return <footer className="footer"><div className="footer-top section-shell"><div><Wordmark light /><p>Một chuyến đi qua đồi xanh,<br />và những điều vui ở mỗi khúc quanh.</p></div><div><strong>KHÁM PHÁ</strong>{NAV.map(item => <Link href={item.href} key={item.href}>{item.label}</Link>)}</div><div><strong>LIÊN HỆ</strong><a href={PHONE}>070 288 2299</a><a href={EMAIL}>kinhdoanh.chuonchuon@gmail.com</a><a href={MAP} target="_blank" rel="noopener noreferrer">217 Thôn 5, Nam Ban, Lâm Đồng ↗</a></div><div className="footer-sun" aria-hidden="true"><BotanicalBurst /></div></div><div className="footer-bottom section-shell"><span>© 2026 ĐIỂM DU LỊCH CHUỒN CHUỒN</span><span>GIỮ NHỊP VUI TRONG TỪNG CHUYẾN ĐI</span><Link href="/">LÊN ĐẦU TRANG ↑</Link></div></footer>;
-}
 
 export function GardenChat() {
   const { state, open } = useCoze();
@@ -392,29 +218,59 @@ export function GardenChat() {
 }
 
 
-export function PageBanner({ eyebrow, title, accent, image, alt, intro }: { eyebrow:string; title:string; accent:string; image:string; alt:string; intro:string }) {
-  return <section className="page-banner"><div className="page-banner-photo"><img src={image} alt={alt} fetchPriority="high" /></div><div className="page-banner-shade" /><div className="page-banner-content"><span className="eyebrow">{eyebrow}</span><h1>{title}<br /><em>{accent}</em></h1><p>{intro}</p></div></section>;
+function Wordmark({light=false}:{light?:boolean}){
+ return <Link href="/" className={`wordmark ${light?'wordmark-light':''}`} aria-label="Chuồn Chuồn Coffee & Bistro - Về trang chủ"><span className="logo-source"><img src="/images/chuon-chuon/logo-coffee-bistro.png" width="60" height="60" alt="Logo Chuồn Chuồn Coffee & Bistro"/></span><span className="wordmark-text"><strong>Chuồn Chuồn</strong><small>COFFEE & BISTRO</small></span></Link>;
 }
-export function RouteMotion({ children }: { children:ReactNode }) {
-  const rootRef=usePageMotion();
-  return <div ref={rootRef} className="route-motion">{children}</div>;
+export function Header(){
+ const [open,setOpen]=useState(false);const pathname=usePathname();const toggle=useRef<HTMLButtonElement>(null);
+ useEffect(()=>{setOpen(false);},[pathname]);
+ useEffect(()=>{if(!open)return;const close=(e:KeyboardEvent)=>{if(e.key==='Escape'){setOpen(false);toggle.current?.focus();}};document.addEventListener('keydown',close);return()=>document.removeEventListener('keydown',close);},[open]);
+ return <header className="site-header"><div className="header-inner"><Wordmark/><nav className="desktop-nav" aria-label="Điều hướng chính">{NAV.map(item=><Link href={item.href} key={item.href} aria-current={pathname===item.href?'page':undefined}>{item.label}</Link>)}</nav><a className="nav-map" href={MAP} target="_blank" rel="noopener noreferrer"><SymbolIcon name="pin" size={17}/>Chỉ đường<SymbolIcon name="arrow" size={16}/></a><button ref={toggle} className="mobile-toggle" type="button" aria-label={open?'Đóng menu':'Mở menu'} aria-expanded={open} aria-controls="mobile-navigation" onClick={()=>setOpen(v=>!v)}><SymbolIcon name={open?'close':'menu'} size={24}/></button></div>{open&&<nav id="mobile-navigation" className="mobile-nav" aria-label="Điều hướng di động">{NAV.map(item=><Link href={item.href} key={item.href} aria-current={pathname===item.href?'page':undefined} onClick={()=>setOpen(false)}>{item.label}<SymbolIcon name="arrow" size={18}/></Link>)}<a href={MAP} target="_blank" rel="noopener noreferrer">Mở Google Maps<SymbolIcon name="pin" size={18}/></a></nav>}</header>;
 }
-export function HomeRoutes() {
-  const items=[
-    {url:'/trai-nghiem',number:'01',label:'Trải nghiệm',image:PHOTO.animal,alt:'Gia đình ở khu thú mini'},
-    {url:'/gia-ve',number:'02',label:'Giá vé',image:PHOTO.flowers,alt:'Vườn hoa tại Chuồn Chuồn'},
-    {url:'/len-ke-hoach',number:'03',label:'Lên kế hoạch',image:PHOTO.path,alt:'Lối đi giữa vườn hoa'},
-    {url:'/duong-di',number:'04',label:'Đường đi',image:PHOTO.bridge,alt:'Cầu tham quan ở Chuồn Chuồn'},
-  ];
-  return <section className="home-routes section-shell"><span className="eyebrow">ĐIỂM BẮT ĐẦU CHO CHUYẾN ĐI CỦA BẠN</span><h2>Chọn một lối.<br /><em>Mở một hành trình.</em></h2><div className="home-route-grid">{items.map(item=><Link href={item.url} className="home-route-card" key={item.url}><img src={item.image} alt={item.alt} loading="lazy" /><div><span>KHÁM PHÁ</span><h3>{item.label}</h3><SymbolIcon name="arrow" size={24} /></div></Link>)}</div></section>;
+export function RouteMotion({children}:{children:ReactNode}){
+ const root=useRef<HTMLDivElement>(null);
+ useEffect(()=>{
+  const el=root.current;if(!el)return;
+  const media=window.matchMedia('(prefers-reduced-motion: reduce)');
+  const reveal=Array.from(el.querySelectorAll<HTMLElement>('[data-reveal]'));
+  const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('is-visible');observer.unobserve(entry.target);}}),{threshold:.08});
+  if(!media.matches){el.classList.add('motion-ready');reveal.forEach(item=>observer.observe(item));}
+  const photos=Array.from(el.querySelectorAll<HTMLElement>('[data-parallax]'));let frame=0;
+  const paint=()=>{frame=0;if(media.matches)return;photos.forEach(photo=>{const box=photo.getBoundingClientRect();if(box.bottom>0&&box.top<window.innerHeight){const p=(window.innerHeight*.5-(box.top+box.height*.5))/window.innerHeight;photo.style.setProperty('--drift',`${Math.max(-35,Math.min(35,p*55))}px`);}});};
+  const tick=()=>{if(!frame)frame=requestAnimationFrame(paint);};
+  const change=()=>{if(media.matches){el.classList.remove('motion-ready');photos.forEach(photo=>photo.style.removeProperty('--drift'));}};
+  window.addEventListener('scroll',tick,{passive:true});media.addEventListener('change',change);tick();
+  return()=>{observer.disconnect();cancelAnimationFrame(frame);window.removeEventListener('scroll',tick);media.removeEventListener('change',change);};
+ },[]);
+ return <div className="route-motion" ref={root}>{children}</div>;
 }
-export function TicketPolicy() {
-  return <section className="policy-panel section-shell"><div><span className="eyebrow">MUA VÉ NHƯ THẾ NÀO?</span><h2>Đến nơi.<br /><em>Mua vé tại quầy.</em></h2></div><div><p>Hiện tại vé được mua trực tiếp tại điểm tham quan, không yêu cầu đặt trước đối với khách lẻ. Bạn có thể thanh toán bằng tiền mặt hoặc chuyển khoản. Giá vé đã bao gồm VAT.</p><p>Sau khi mua, vé không áp dụng đổi ngày, hủy hoặc hoàn tiền, kể cả trong trường hợp mưa hoặc thời tiết xấu.</p><a href="/duong-di" className="text-link">Xem đường đi <SymbolIcon name="arrow" size={19} /></a></div></section>;
+export function Intro(){
+ return <section className="intro section-shell" id="gioi-thieu"><div className="intro-heading" data-reveal><span className="eyebrow">ĐIỂM DU LỊCH CHUỒN CHUỒN</span><h2>Thiên nhiên, trò chơi<br/>và những điểm dừng<br/><em>đáng khám phá.</em></h2></div><div className="intro-layout"><figure className="intro-tall" data-parallax><img src={PHOTO.family} alt="Gia đình đi dạo giữa vườn hoa trên đồi" loading="lazy"/><figcaption>Đường dạo trong khuôn viên</figcaption></figure><div className="intro-copy" data-reveal><p>Điểm Du Lịch Chuồn Chuồn kết hợp cảnh quan đồi, vườn hoa, khu check-in và hoạt động vui chơi ngoài trời. Gia đình, nhóm bạn và khách du lịch có thể chọn trải nghiệm phù hợp với chuyến đi của mình.</p><Link href="/trai-nghiem" className="text-link">Khám phá Chuồn Chuồn<SymbolIcon name="arrow" size={20}/></Link><figure className="intro-small" data-parallax><img src={PHOTO.mini} alt="Các tiểu cảnh nhà trên cây trong khuôn viên" loading="lazy"/><figcaption>Các góc check-in</figcaption></figure></div></div></section>;
 }
-export function TravelNotes() {
-  return <section className="policy-panel section-shell"><div><span className="eyebrow">TRƯỚC KHI ĐẾN</span><h2>Một vài<br /><em>điều nên biết.</em></h2></div><div><p>Bãi đỗ xe cho xe máy, ô tô và xe đoàn được miễn phí. Một số lối tham quan trên địa hình đồi có độ dốc và không thuận tiện cho người dùng xe lăn.</p><p>Khách có thể mang snack nhẹ với số lượng phù hợp; đồ ăn và thức uống từ bên ngoài không được mang vào theo quy định doanh nghiệp cung cấp.</p><a href="tel:+84702882299" className="text-link">Hỏi trực tiếp nhân viên <SymbolIcon name="arrow" size={19} /></a></div></section>;
+export function HomeRoutes(){
+ return <section className="home-routes section-shell" id="thong-tin"><div className="section-heading" data-reveal><span className="eyebrow">CHUẨN BỊ CHUYẾN ĐI</span><h2>Thông tin cần biết<br/><em>trước chuyến đi.</em></h2></div><div className="essential-grid"><Link href="/gia-ve" className="essential-card price-card" data-reveal><span>GIÁ VÉ THAM QUAN</span><strong>120.000<small>đ / người lớn</small></strong><p>Trẻ em 80.000đ. Dưới 1,0 m miễn phí.</p><b>Xem giá vé và quyền lợi<SymbolIcon name="arrow"/></b></Link><Link href="/len-ke-hoach" className="essential-card" data-reveal><span>GIỜ MỞ CỬA</span><strong>07:30 - 17:00</strong><p>Mở cửa hằng ngày, kể cả ngày lễ.</p><b>Chuẩn bị chuyến tham quan<SymbolIcon name="arrow"/></b></Link><Link href="/duong-di" className="essential-card" data-reveal><span>ĐỊA ĐIỂM</span><strong>Nam Ban<small>Lâm Đồng</small></strong><p>217 Thôn 5, Nam Ban, Lâm Đồng.</p><b>Xem đường đi<SymbolIcon name="arrow"/></b></Link><Link href="/khach-doan" className="essential-card group-card" data-reveal><span>KHÁCH ĐOÀN</span><h3>Lên kế hoạch<br/>cho đoàn của bạn.</h3><p>Trao đổi nhu cầu tham quan và ăn uống trước chuyến đi.</p><b>Liên hệ tư vấn đoàn<SymbolIcon name="arrow"/></b></Link></div></section>;
 }
-
-function BotanicalBurst() {
-  return <svg viewBox="0 0 100 100" fill="none" aria-hidden="true" focusable="false"><g stroke="currentColor" strokeWidth="12" strokeLinecap="round">{Array.from({length:8},(_,i)=><path key={i} d="M50 15V35" transform={`rotate(${i*45} 50 50)`} />)}</g><circle cx="50" cy="50" r="10" fill="currentColor" /></svg>;
+export function Momentum(){
+ return <section className="momentum" data-parallax><img src={PHOTO.bridge} alt="Tháp và cầu tham quan giữa cảnh đồi tại Chuồn Chuồn" loading="lazy"/><div className="momentum-content" data-reveal><span className="eyebrow">HÌNH ẢNH CHUỒN CHUỒN</span><h2>Xem Chuồn Chuồn qua<br/><em>những hình ảnh thực tế.</em></h2><Link href="/trai-nghiem#bo-suu-tap" className="button button-light">Xem bộ ảnh<SymbolIcon name="arrow"/></Link></div></section>;
 }
+export function PageBanner({eyebrow,title,accent,image,alt,intro}:{eyebrow:string;title:string;accent:string;image:string;alt:string;intro:string}){
+ return <section className="page-banner"><div className="page-banner-photo" data-parallax><img src={image} alt={alt} fetchPriority="high"/></div><div className="page-banner-content"><span className="eyebrow">{eyebrow}</span><h1>{title}<br/><em>{accent}</em></h1><p>{intro}</p></div><a className="banner-down" href="#chi-tiet" aria-label="Đến nội dung chi tiết"><SymbolIcon name="down" size={20}/></a></section>;
+}
+export function Experiences(){
+ return <section className="experiences section-shell" id="chi-tiet"><div className="section-heading" data-reveal><span className="eyebrow">CÁC KHU TRẢI NGHIỆM</span><h2>Chọn trải nghiệm<br/><em>phù hợp với chuyến đi.</em></h2><p>Từ vườn hoa và vườn thú mini đến các hoạt động ngoài trời. Xem từng khu trước khi lên lịch tham quan.</p></div><div className="experience-grid">{EXPERIENCES.map(item=><article className={`experience-card ${item.poster?'experience-poster':''}`} id={item.id} key={item.id} data-reveal><div className="experience-image" data-parallax><img src={item.image} alt={item.alt} loading="lazy"/>{item.poster&&<span className="image-label">Ảnh truyền thông</span>}</div><div className="experience-info"><span className="eyebrow">{item.tag}</span><h3>{item.title}</h3><p>{item.desc}</p>{['sky-line','truot-phao'].includes(item.id)&&<Link href="/len-ke-hoach#luu-y" className="text-link">Điều kiện tham gia<SymbolIcon name="arrow" size={17}/></Link>}</div></article>)}</div><div className="experience-note"><p>Vé tham quan còn bao gồm xích đu ngắm cảnh. Tình trạng hoạt động phụ thuộc thời tiết và điều kiện vận hành trong ngày.</p><Link href="/gia-ve" className="text-link">Xem quyền lợi vé<SymbolIcon name="arrow" size={18}/></Link></div></section>;
+}
+export function Gallery(){
+ const photos=[{image:PHOTO.lamb,alt:'Du khách cho đàn cừu ăn',caption:'Vườn thú mini'},{image:PHOTO.child,alt:'Em bé gặp đàn cừu cùng người lớn',caption:'Trải nghiệm cùng gia đình'},{image:PHOTO.flowers,alt:'Toàn cảnh những luống hoa tím',caption:'Vườn hoa'},{image:PHOTO.mini,alt:'Tiểu cảnh nhà trên cây giữa khu vườn',caption:'Các góc check-in'}];
+ return <section className="gallery" id="bo-suu-tap"><div className="section-shell"><div className="section-heading" data-reveal><span className="eyebrow">BỘ ẢNH</span><h2>Hình ảnh<br/><em>tại Chuồn Chuồn.</em></h2><p>Xem cảnh quan và các hoạt động qua bộ ảnh do Chuồn Chuồn cung cấp. Tình trạng hoa có thể thay đổi theo mùa.</p></div><div className="gallery-grid">{photos.map(p=><figure key={p.image} data-reveal><img src={p.image} alt={p.alt} loading="lazy"/><figcaption>{p.caption}</figcaption></figure>)}</div><div className="media-strip"><figure><img src={PHOTO.campaign2} alt="Ảnh truyền thông nhóm du khách check-in tại Chuồn Chuồn" loading="lazy"/><figcaption>Ảnh truyền thông do Chuồn Chuồn cung cấp</figcaption></figure><div className="media-thumbnail"><img src={PHOTO.sign} alt="Ảnh thu nhỏ đường trượt và biển Chuồn Chuồn" loading="lazy" width="96" height="96"/><p>Góc nhìn đường trượt<br/><span>Ảnh thu nhỏ từ bộ tư liệu</span></p></div></div></div></section>;
+}
+export function Tickets(){
+ return <section className="tickets section-shell" id="chi-tiet"><div className="section-heading" data-reveal><span className="eyebrow">CHỌN VÉ THEO CHIỀU CAO</span><h2>Giá vé tham quan<br/><em>Chuồn Chuồn.</em></h2><p>Giá đã bao gồm VAT, áp dụng như nhau vào ngày thường, cuối tuần và dịp lễ.</p></div><div className="ticket-stack"><article className="ticket-card ticket-adult" data-reveal><span>VÉ NGƯỜI LỚN</span><strong>120.000<small>đ / khách</small></strong><p>Khách cao trên 1,4 m.</p></article><article className="ticket-card" data-reveal><span>VÉ TRẺ EM</span><strong>80.000<small>đ / khách</small></strong><p>Từ 1,0 m đến 1,4 m.</p></article><article className="ticket-card ticket-free" data-reveal><span>TRẺ EM DƯỚI 1,0 M</span><strong>Miễn phí</strong><p>Loại vé được xác định theo chiều cao thực tế.</p></article></div><div className="ticket-details"><div><h3>Đã bao gồm trong vé</h3><p>Vườn hoa và cảnh quan, vườn thú mini, đạp xe trên nước, xích đu ngắm cảnh, Sky Line và trượt phao khô bảy sắc cầu vồng.</p></div><div><h3>Chi phí riêng</h3><p>Ăn uống và thức ăn chuyên dụng để cho thú ăn được tính riêng.</p></div></div></section>;
+}
+export function TicketPolicy(){return <section className="policy-panel section-shell"><div data-reveal><span className="eyebrow">CÁCH MUA VÉ</span><h2>Mua vé trực tiếp<br/><em>tại điểm tham quan.</em></h2></div><div className="policy-copy" data-reveal><ul><li>Không cần đặt trước đối với khách lẻ.</li><li>Thanh toán bằng tiền mặt hoặc chuyển khoản.</li><li>Vé đã mua không áp dụng đổi ngày, hủy hoặc hoàn tiền, kể cả do thời tiết.</li></ul><Link href="/duong-di" className="text-link">Xem đường đi<SymbolIcon name="arrow"/></Link></div></section>;}
+export function Plan(){
+ return <section className="plan section-shell" id="chi-tiet"><div className="section-heading" data-reveal><span className="eyebrow">TRƯỚC KHI ĐẾN</span><h2>Những điều nên biết<br/><em>trước khi đến.</em></h2></div><div className="plan-layout"><figure className="plan-photo" data-parallax><img src={PHOTO.family} alt="Gia đình tham quan trên lối đi giữa các luống hoa" loading="lazy"/><figcaption>Khuôn viên có địa hình đồi và nhiều đoạn dốc.</figcaption></figure><div className="plan-facts" id="luu-y"><div data-reveal><span className="eyebrow">GIỜ MỞ CỬA</span><h3>07:30 - 17:00</h3><p>Mở cửa hằng ngày, kể cả ngày lễ; các khu áp dụng giờ chung.</p></div><div data-reveal><span className="eyebrow">ĐIỀU KIỆN THAM GIA</span><h3>Sky Line và trượt phao khô</h3><p>Trẻ em cao trên 1,2 m, đủ điều kiện sức khỏe và tuân theo hướng dẫn nhân viên. Khách có bệnh tim mạch hoặc bệnh lý thần kinh không nên tham gia.</p></div><div data-reveal><span className="eyebrow">ĂN UỐNG</span><h3>Nhà hàng và quầy nước</h3><p>Một nhà hàng chính và ba điểm phục vụ đồ uống; chi phí ăn uống không nằm trong vé.</p></div><div data-reveal><span className="eyebrow">THỜI TIẾT</span><h3>Kiểm tra tình trạng trong ngày</h3><p>Một số hoạt động ngoài trời có thể tạm dừng khi thời tiết không bảo đảm an toàn. Gọi hotline để hỏi tình trạng trong ngày.</p></div></div></div><div className="faq"><div><span className="eyebrow">THÔNG TIN THÊM</span><h2>Câu hỏi<br/><em>trước chuyến đi.</em></h2></div><div>{QUESTIONS.map(q=><details key={q.q}><summary>{q.q}<span aria-hidden="true">+</span></summary><p>{q.a}</p></details>)}</div></div></section>;
+}
+export function TravelNotes(){return <section className="policy-panel section-shell"><div data-reveal><span className="eyebrow">LƯU Ý THAM QUAN</span><h2>Di chuyển và quy định<br/><em>trong khuôn viên.</em></h2></div><div className="policy-copy" data-reveal><p>Khuôn viên có địa hình đồi và nhiều đoạn dốc. Khách đi cùng trẻ nhỏ, người lớn tuổi hoặc người khó di chuyển nên cân nhắc lộ trình.</p><p>Không mang thức ăn, đồ uống từ bên ngoài vào khu du lịch, ngoại trừ snack nhẹ với số lượng phù hợp.</p><a href={PHONE} className="text-link">Hỏi trực tiếp nhân viên<SymbolIcon name="arrow"/></a></div></section>;}
+export function Visit(){return <section className="visit section-shell" id="chi-tiet"><div className="visit-panel" data-reveal><span className="eyebrow">ĐỊA CHỈ & DI CHUYỂN</span><h2>Tìm đường<br/><em>đến Chuồn Chuồn.</em></h2><address>217 Thôn 5, Nam Ban,<br/>Lâm Đồng, Việt Nam</address><div className="visit-facts"><div><strong>18 - 20 km</strong><span>Khoảng cách tham khảo từ trung tâm Đà Lạt</span></div><div><strong>30 - 40 phút</strong><span>Thời gian tham khảo, tùy điểm xuất phát và giao thông</span></div><div><strong>Đỗ xe miễn phí</strong><span>Xe máy, ô tô và xe đoàn lớn</span></div></div><a href={MAP} className="button button-dark" target="_blank" rel="noopener noreferrer">Mở Google Maps<SymbolIcon name="arrow"/></a></div><figure className="visit-photo" data-parallax><img src={PHOTO.bridge} alt="Khu tham quan Chuồn Chuồn trên đồi" loading="lazy"/><figcaption>Nam Ban, Lâm Đồng</figcaption></figure></section>;}
+export function Groups(){return <section className="groups section-shell" id="chi-tiet"><div className="groups-copy" data-reveal><span className="eyebrow">TƯ VẤN KHÁCH ĐOÀN</span><h2>Lên kế hoạch<br/><em>cho đoàn của bạn.</em></h2><p>Gửi thông tin đoàn và ngày dự kiến để được tư vấn phương án tham quan, ăn uống và chuẩn bị đón tiếp.</p><div className="group-actions"><a href={EMAIL} className="button button-dark">Gửi email tư vấn đoàn<SymbolIcon name="arrow"/></a><a href={PHONE} className="group-phone"><SymbolIcon name="phone"/>070 288 2299</a></div><p className="group-small">Hotline có nhân viên tiếp nhận: 08:00 - 17:30</p></div><div className="group-checklist" data-reveal><span className="eyebrow">THÔNG TIN ĐỂ TƯ VẤN</span><h3>Khi liên hệ, bạn có thể gửi:</h3><ul><li>Ngày tham quan dự kiến</li><li>Số lượng khách và thành phần đoàn</li><li>Nhu cầu ăn uống, hoạt động</li><li>Thông tin người liên hệ</li></ul><a href={EMAIL}>kinhdoanh.chuonchuon@gmail.com</a></div></section>;}
+export function Footer(){return <footer className="footer"><div className="footer-top section-shell"><div><Wordmark light/><p>Điểm tham quan và vui chơi<br/>tại Nam Ban, Lâm Đồng.</p></div><div><strong>KHÁM PHÁ</strong>{NAV.map(item=><Link href={item.href} key={item.href}>{item.label}</Link>)}</div><div><strong>LIÊN HỆ</strong><a href={PHONE}>070 288 2299</a><a href={EMAIL}>kinhdoanh.chuonchuon@gmail.com</a><a href={MAP} target="_blank" rel="noopener noreferrer">217 Thôn 5, Nam Ban, Lâm Đồng ↗</a><span>Giờ mở cửa: 07:30 - 17:00</span></div></div><div className="footer-bottom section-shell"><span>© 2026 ĐIỂM DU LỊCH CHUỒN CHUỒN</span><a href="#noi-dung">Lên đầu trang ↑</a></div></footer>;}

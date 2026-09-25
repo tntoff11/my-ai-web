@@ -1,6 +1,4 @@
-import type { Metadata } from 'next';
-import { Groups, PageBanner, RouteMotion } from '../_components/SiteParts';
-export const metadata: Metadata = { title: 'Khách đoàn' };
-export default function GroupsPage() {
-  return <RouteMotion><PageBanner eyebrow="HÀNH TRÌNH CÙNG NHAU" title="Đi cùng nhau." accent="Vui nhiều hơn." image="/images/chuon-chuon/gia-dinh-vuon-thu.jpg" alt="Gia đình trải nghiệm khu thú mini" intro="Dành cho đoàn, trường học, doanh nghiệp và những chuyến đi cần chuẩn bị trước." /><Groups /></RouteMotion>;
-}
+import type {Metadata} from 'next';
+import {PageBanner,RouteMotion,Groups} from '../_components/SiteParts';
+export const metadata:Metadata={title:'Khách đoàn',description:'Chuồn Chuồn tiếp nhận nhu cầu từ trường học, doanh nghiệp, nhóm du lịch và đối tác. Liên hệ trước để trao đổi về số lượng khách, hoạt động và ăn uống.'};
+export default function Page(){return <RouteMotion><PageBanner eyebrow="TRƯỜNG HỌC · DOANH NGHIỆP · NHÓM DU LỊCH" title="Thông tin dành cho" accent="khách đoàn." image="/images/chuon-chuon/gia-dinh-vuon-thu.jpg" alt="Gia đình tham quan vườn thú mini" intro="Chuồn Chuồn tiếp nhận nhu cầu từ trường học, doanh nghiệp, nhóm du lịch và đối tác. Liên hệ trước để trao đổi về số lượng khách, hoạt động và ăn uống."/><Groups/></RouteMotion>;}
