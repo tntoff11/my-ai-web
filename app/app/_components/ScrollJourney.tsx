@@ -1,103 +1,70 @@
 'use client';
-
-import { useEffect, useRef, useState } from 'react';
+import {useEffect,useRef,useState} from 'react';
 import Link from 'next/link';
+import {PHOTO} from './content';
 
-const scenes = [
-  { name: 'Giữa mùa hoa', tag: 'CẢNH QUAN & CHECK-IN', image: 'toan-canh-vuon-hoa.jpg', alt: 'Những dải hoa tím trải dài trên đồi tại Chuồn Chuồn', text: 'Một khúc quanh, một góc nhìn mới.' },
-  { name: 'Gặp bạn nhỏ', tag: 'VƯỜN THÚ MINI', image: 'gia-dinh-vuon-thu.jpg', alt: 'Gia đình tương tác với đàn cừu tại vườn thú mini', text: 'Những cuộc gặp làm chuyến đi thêm đáng nhớ.' },
-  { name: 'Theo nhịp nước', tag: 'ĐẠP XE TRÊN NƯỚC', image: 'dap-xe-tren-nuoc.jpg', alt: 'Du khách đạp xe trên mặt hồ giữa thiên nhiên', text: 'Đổi nhịp khám phá. Mở thêm một khoảng trời.' },
+const scenes=[
+ {label:'Chuồn Chuồn',title:'Một ngày ở Chuồn Chuồn',accent:'bắt đầu từ đây.',text:'Khám phá vườn hoa, các điểm ngắm cảnh và hoạt động ngoài trời tại Nam Ban, Lâm Đồng.',image:PHOTO.hero,alt:'Đường xe trượt uốn quanh những tán hoa tím tại Chuồn Chuồn',secondary:PHOTO.bridge,secondaryAlt:'Công trình tham quan trên đồi',caption:'NAM BAN · LÂM ĐỒNG',href:'/trai-nghiem',cta:'Khám phá Chuồn Chuồn',position:'50% 50%'},
+ {label:'Vườn hoa',title:'Đi giữa',accent:'những mùa hoa.',text:'Dạo qua vườn hoa và các tuyến đường trong khuôn viên. Cảnh quan thay đổi theo mùa.',image:PHOTO.flowers,alt:'Toàn cảnh vườn hoa tím và đồi xanh',secondary:PHOTO.family,secondaryAlt:'Gia đình dạo qua vườn hoa',caption:'VƯỜN HOA & ĐƯỜNG DẠO',href:'/trai-nghiem#vuon-hoa',cta:'Xem khu vườn',position:'50% 60%'},
+ {label:'Vườn thú',title:'Một điểm dừng',accent:'cho cả gia đình.',text:'Ghé vườn thú mini và tương tác với các loài vật theo hướng dẫn tại khu vực.',image:PHOTO.animal,alt:'Gia đình gặp đàn cừu trong vườn thú mini',secondary:PHOTO.child,secondaryAlt:'Em bé gặp những chú cừu',caption:'VƯỜN THÚ MINI',href:'/trai-nghiem#vuon-thu',cta:'Xem vườn thú mini',position:'58% 50%'},
+ {label:'Vui chơi',title:'Khám phá',accent:'từ mặt hồ.',text:'Trải nghiệm đạp xe trên nước và ngắm cảnh từ một góc nhìn khác. Khám phá thêm Sky Line và trượt phao khô trong khuôn viên.',image:PHOTO.lake,alt:'Các nhóm du khách đạp xe trên hồ',secondary:PHOTO.path,secondaryAlt:'Du khách đi xe trượt Sky Line giữa đồi hoa',caption:'ĐẠP XE TRÊN NƯỚC · SKY LINE',href:'/trai-nghiem#sky-line',cta:'Xem hoạt động vui chơi',position:'50% 55%'},
+ {label:'Ăn uống',title:'Nhà hàng và',accent:'điểm phục vụ đồ uống.',text:'Một nhà hàng chính và ba điểm phục vụ đồ uống để nghỉ chân trong chuyến tham quan. Chi phí ăn uống được tính riêng.',image:PHOTO.cafe,alt:'Không gian phục vụ ăn uống nhìn ra hồ và cảnh đồi',secondary:PHOTO.mini,secondaryAlt:'Tiểu cảnh nhà trên cây trong khuôn viên',caption:'COFFEE & BISTRO',href:'/trai-nghiem#am-thuc',cta:'Xem thông tin ăn uống',position:'50% 55%'}
 ];
-const clamp = (x: number, low = 0, high = 1) => Math.min(high, Math.max(low, x));
-
-export default function ScrollJourney() {
-  const host = useRef<HTMLElement>(null);
-  const line = useRef<SVGPathElement>(null);
-  const marker = useRef<SVGGElement>(null);
-  const cards = useRef<(HTMLElement | null)[]>([]);
-  const [active, setActive] = useState(0);
-
-  useEffect(() => {
-    const section = host.current;
-    if (!section) return;
-    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
-    let frame = 0;
-    let previous = -1;
-    const pathLength = line.current?.getTotalLength() ?? 0;
-    const draw = () => {
-      frame = 0;
-      if (media.matches) {
-        section.classList.remove('journey-enhanced');
-        cards.current.forEach(card => {
-          card?.removeAttribute('style');
-          card?.removeAttribute('aria-hidden');
-        });
-        return;
-      }
-      section.classList.add('journey-enhanced');
-      const box = section.getBoundingClientRect();
-      const top = window.innerWidth <= 850 ? 78 : 92;
-      const travel = Math.max(1, box.height - (window.innerHeight - top));
-      const p = clamp((top - box.top) / travel);
-      section.style.setProperty('--journey-progress', String(p));
-      section.style.setProperty('--camera-turn', `${-17 + p * 31}deg`);
-      section.style.setProperty('--camera-rise', `${70 - p * 125}px`);
-      const path = line.current;
-      if (path) {
-        const length = pathLength;
-        path.style.strokeDasharray = String(length);
-        path.style.strokeDashoffset = String(length * (1 - p));
-        const point = path.getPointAtLength(length * p);
-        marker.current?.setAttribute('transform', `translate(${point.x} ${point.y})`);
-      }
-      const stage = p * (scenes.length - 1);
-      const next = Math.round(stage);
-      if (next !== previous) { previous = next; setActive(next); }
-      cards.current.forEach((card, index) => {
-        if (!card) return;
-        const offset = index - stage;
-        const visible = Math.abs(offset) < .73;
-        card.style.opacity = String(clamp(1 - Math.abs(offset) * 1.6));
-        card.style.visibility = visible ? 'visible' : 'hidden';
-        card.style.transform = `translate3d(${offset * 72}%, ${Math.abs(offset) * 46}px, ${-Math.abs(offset) * 330}px) rotateY(${offset * -28}deg) rotateZ(${offset * 5}deg)`;
-        card.style.pointerEvents = Math.abs(offset) < .5 ? 'auto' : 'none';
-        card.setAttribute('aria-hidden', String(Math.abs(offset) > .5));
-      });
-    };
-    const schedule = () => { if (!frame) frame = requestAnimationFrame(draw); };
-    draw();
-    window.addEventListener('scroll', schedule, { passive: true });
-    window.addEventListener('resize', schedule);
-    media.addEventListener('change', schedule);
-    return () => {
-      if (frame) cancelAnimationFrame(frame);
-      window.removeEventListener('scroll', schedule);
-      window.removeEventListener('resize', schedule);
-      media.removeEventListener('change', schedule);
-    };
-  }, []);
-
-  const moveTo = (index: number) => {
-    const section = host.current;
-    if (!section) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      cards.current[index]?.scrollIntoView({ block: 'center' }); return;
-    }
-    const top = window.innerWidth <= 850 ? 78 : 92;
-    const box = section.getBoundingClientRect();
-    const distance = box.height - (window.innerHeight - top);
-    window.scrollTo({ top: window.scrollY + box.top - top + distance * index / (scenes.length - 1), behavior: 'smooth' });
+const clamp=(n:number)=>Math.max(0,Math.min(1,n));
+export default function ScrollJourney(){
+ const root=useRef<HTMLElement>(null),stage=useRef<HTMLDivElement>(null);
+ const frames=useRef<(HTMLElement|null)[]>([]),copies=useRef<(HTMLDivElement|null)[]>([]),photos=useRef<(HTMLDivElement|null)[]>([]);
+ const path=useRef<SVGPathElement>(null),rider=useRef<SVGGElement>(null);
+ const [active,setActive]=useState(0);const indexRef=useRef(0);const mode=useRef(false);
+ useEffect(()=>{
+  const host=root.current,view=stage.current;if(!host||!view)return;
+  const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
+  const short=window.matchMedia('(max-height: 560px)');
+  let frame=0,current=0,target=0,inView=true,lastY=-1;
+  const length=path.current?.getTotalLength()??1;
+  const draw=()=>{
+   frame=0;if(!mode.current)return;
+   current+=(target-current)*.16;if(Math.abs(target-current)<.0006)current=target;
+   const progress=clamp(current),position=progress*4.5;
+   let next=0;for(let i=1;i<scenes.length;i++)if(position>i-.22)next=i;
+   if(next!==indexRef.current){indexRef.current=next;setActive(next);}
+   frames.current.forEach((scene,i)=>{
+    if(!scene)return;
+    const reveal=i===0?1:clamp((position-i+.65)/.6);
+    const following=i<scenes.length-1?clamp((position-i-.35)/.6):0;
+    const visible=reveal>0&&following<1;
+    scene.style.visibility=visible?'visible':'hidden';
+    scene.style.clipPath=i===0?'none':`ellipse(${reveal*155}% ${reveal*150}% at ${i%2?'100%':'0%'} 100%)`;
+    scene.setAttribute('aria-hidden',String(i!==next));scene.inert=i!==next;
+    const photo=photos.current[i];
+    if(photo){photo.style.transform=`scale(${1.045+(1-reveal)*.12+following*.065}) translate3d(${(1-reveal)*(i%2?3:-3)}%,${-following*1.5}%,0)`;}
+    const copy=copies.current[i];
+    if(copy){const opacity=clamp((reveal-.45)/.55)*(1-clamp(following*1.5));copy.style.opacity=String(opacity);copy.style.transform=`translate3d(0,${(1-opacity)*28}px,0)`;}
+    scene.style.setProperty('--scene-arrival',String(reveal));
+   });
+   host.style.setProperty('--journey-progress',String(progress));
+   if(path.current){path.current.style.strokeDasharray=String(length);path.current.style.strokeDashoffset=String(length*(1-progress));const point=path.current.getPointAtLength(length*progress);rider.current?.setAttribute('transform',`translate(${point.x} ${point.y})`);}
+   if(current!==target&&inView&&!document.hidden)frame=requestAnimationFrame(draw);
   };
-
-  return <section ref={host} className="scroll-journey" aria-labelledby="journey-title">
-    <div className="journey-stage">
-      <div className="journey-grid" aria-hidden="true" />
-      <div className="journey-aura" aria-hidden="true" />
-      <header className="journey-heading"><span className="eyebrow">CUỘN ĐỂ MỞ HÀNH TRÌNH</span><h2 id="journey-title">Mỗi khúc quanh.<br /><em>Một điều bất ngờ.</em></h2></header>
-      <div className="journey-world" aria-hidden="true"><svg viewBox="0 0 1000 700" className="journey-ribbon" fill="none"><defs><linearGradient id="journey-colour" x1="120" y1="0" x2="850" y2="700" gradientUnits="userSpaceOnUse"><stop stopColor="#c9f589"/><stop offset=".45" stopColor="#5bd8b2"/><stop offset="1" stopColor="#d7ed75"/></linearGradient></defs><path className="ribbon-depth" d="M100 70C850-80 1020 215 530 245S-130 450 390 465 1050 600 850 715"/><path className="ribbon-under" d="M100 70C850-80 1020 215 530 245S-130 450 390 465 1050 600 850 715"/><path ref={line} className="ribbon-lit" d="M100 70C850-80 1020 215 530 245S-130 450 390 465 1050 600 850 715"/><g ref={marker} className="ribbon-marker"><circle r="24" fill="#e5ffaf" fillOpacity=".2"/><circle r="10" fill="#efffcd"/><circle r="4" fill="#1a5441"/></g></svg></div>
-      <div className="journey-cards">{scenes.map((scene,index) => <article ref={node => { cards.current[index]=node; }} className="journey-card" key={scene.name}><div className="journey-card-photo"><img src={`/images/chuon-chuon/${scene.image}`} alt={scene.alt} loading="lazy" decoding="async"/><span>{scene.tag}</span></div><div className="journey-card-caption"><h3>{scene.name}</h3><p>{scene.text}</p></div></article>)}</div>
-      <div className="journey-controls"><div className="journey-tabs" aria-label="Chọn cảnh trải nghiệm">{scenes.map((scene,index) => <button type="button" key={scene.name} aria-pressed={active===index} onClick={() => moveTo(index)}>{scene.name}</button>)}</div><Link href="/trai-nghiem" className="journey-explore">Khám phá các trải nghiệm <span aria-hidden="true">↗</span></Link></div>
-      <div className="journey-meter" aria-hidden="true"><span /></div>
-    </div>
-  </section>;
+  const schedule=()=>{if(!frame&&inView&&!document.hidden)frame=requestAnimationFrame(draw);};
+  const scroll=()=>{const box=host.getBoundingClientRect();const offset=parseFloat(getComputedStyle(view).top)||0;target=clamp((offset-box.top)/Math.max(1,host.offsetHeight-view.offsetHeight));schedule();};
+  const configure=()=>{
+   mode.current=!reduced.matches&&!short.matches;host.classList.toggle('journey-immersive',mode.current);
+   if(!mode.current){cancelAnimationFrame(frame);frame=0;frames.current.forEach(scene=>{scene?.removeAttribute('style');scene?.removeAttribute('aria-hidden');if(scene)scene.inert=false;});copies.current.forEach(copy=>copy?.removeAttribute('style'));photos.current.forEach(photo=>photo?.removeAttribute('style'));}
+   else {scroll();current=target;draw();}
+  };
+  const observer=new IntersectionObserver(([entry])=>{inView=entry.isIntersecting;if(inView)scroll();else{cancelAnimationFrame(frame);frame=0;}},{rootMargin:'100px'});observer.observe(host);
+  // Ignore address-bar height changes during mobile scroll. CSS uses stable viewport units.
+  const resize=()=>{if(lastY!==window.innerWidth){lastY=window.innerWidth;configure();}};
+  const visibility=()=>{if(document.hidden){cancelAnimationFrame(frame);frame=0;}else scroll();};
+  configure();lastY=window.innerWidth;
+  window.addEventListener('scroll',scroll,{passive:true});window.addEventListener('resize',resize);reduced.addEventListener('change',configure);short.addEventListener('change',configure);document.addEventListener('visibilitychange',visibility);
+  return()=>{cancelAnimationFrame(frame);observer.disconnect();window.removeEventListener('scroll',scroll);window.removeEventListener('resize',resize);reduced.removeEventListener('change',configure);short.removeEventListener('change',configure);document.removeEventListener('visibilitychange',visibility);};
+ },[]);
+ const jump=(i:number)=>{const host=root.current,view=stage.current;if(!host||!view)return;if(!mode.current){frames.current[i]?.scrollIntoView({block:'start',behavior:'auto'});return;}const top=parseFloat(getComputedStyle(view).top)||0;window.scrollTo({top:window.scrollY+host.getBoundingClientRect().top-top+(host.offsetHeight-view.offsetHeight)*i/4.5,behavior:'smooth'});};
+ return <section className="journey" ref={root} aria-label="Khám phá Chuồn Chuồn qua các khu trải nghiệm"><div className="journey-stage" ref={stage}>
+  {scenes.map((scene,i)=><article className={`journey-scene scene-${i}`} key={scene.label} ref={node=>{frames.current[i]=node;}}><div className="scene-photo" ref={node=>{photos.current[i]=node;}}><img src={scene.image} alt={scene.alt} style={{objectPosition:scene.position}} fetchPriority={i===0?'high':'auto'} loading={i<2?'eager':'lazy'} decoding="async"/></div><div className="scene-shade"/><div className="scene-topline"><span>{scene.caption}</span><a href="#thong-tin">Giá vé & thông tin chuyến đi ↗</a></div><div className="scene-copy" ref={node=>{copies.current[i]=node;}}><span className="scene-eyebrow">{i===0?'ĐIỂM DU LỊCH CHUỒN CHUỒN':scene.label}</span>{i===0?<h1>{scene.title}<br/><em>{scene.accent}</em></h1>:<h2>{scene.title}<br/><em>{scene.accent}</em></h2>}<p>{scene.text}</p><div className="scene-actions"><Link href={scene.href} className="button button-light">{scene.cta}<span aria-hidden="true">↗</span></Link>{i===0&&<Link href="/gia-ve" className="scene-ticket">Vé người lớn <strong>120.000đ</strong></Link>}</div></div><figure className="scene-detail"><img src={scene.secondary} alt={scene.secondaryAlt} loading="lazy"/><figcaption>{i===0?'Một góc Chuồn Chuồn':scene.secondaryAlt}</figcaption></figure></article>)}
+  <svg className="journey-ribbon" viewBox="0 0 1440 240" preserveAspectRatio="none" fill="none" aria-hidden="true"><defs><linearGradient id="journey-line" x1="0" x2="1440" gradientUnits="userSpaceOnUse"><stop stopColor="#e2f19d"/><stop offset=".5" stopColor="#faf5d6"/><stop offset="1" stopColor="#a6dcba"/></linearGradient></defs><path d="M-20 155C210 10 390 255 620 140S1060 10 1460 140" stroke="#fff" strokeOpacity=".2" strokeWidth="1"/><path d="M-20 165C210 20 390 265 620 150S1060 20 1460 150" stroke="#fff" strokeOpacity=".12" strokeWidth="1"/><path ref={path} d="M-20 145C210 0 390 245 620 130S1060 0 1460 130" stroke="url(#journey-line)" strokeWidth="2.5"/><g ref={rider}><circle r="12" fill="#e3f2af" fillOpacity=".2"/><circle r="4" fill="#eff6bf"/></g></svg>
+  <div className="journey-controls"><span className="journey-instruction"><span aria-hidden="true">↓</span> Cuộn để khám phá từng khu</span><nav aria-label="Chọn khu trải nghiệm">{scenes.map((scene,i)=><button key={scene.label} onClick={()=>jump(i)} type="button" aria-pressed={active===i}><span className="scene-dot"/>{scene.label}</button>)}</nav></div><div className="journey-progress" aria-hidden="true"><span/></div>
+ </div></section>;
 }
