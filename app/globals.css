@@ -18,3 +18,13 @@
 @media(max-height:720px) and (min-width:851px){.scene-copy{bottom:23%;width:65%}.cc-site .scene-copy h1,.cc-site .scene-copy h2{font-size:46px}.scene-copy p{font-size:15px!important;margin:17px 0 20px!important}.scene-eyebrow{margin-bottom:13px}.scene-topline{top:22px}.scene-detail{bottom:26%;width:19%}.journey-controls{bottom:18px!important}}
 @media(max-height:740px) and (max-width:600px) and (min-height:561px){.scene-copy{bottom:25%}.cc-site .scene-copy h1,.cc-site .scene-copy h2{font-size:32px}.cc-site .scene-copy p{font-size:14px;margin:16px 0 19px;line-height:1.65}.scene-eyebrow{margin-bottom:12px}.scene-ticket{display:none}.scene-topline{top:16px}.scene-actions .button{min-height:45px}.journey-controls button{font-size:9px;min-height:34px}.journey-controls nav{gap:0 14px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.cc-site *, .cc-site *:before,.cc-site *:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.motion-ready [data-reveal]{opacity:1;transform:none}[data-parallax]>img{transform:none!important}.scene-detail{transform:none}.journey-scene{height:auto;min-height:700px}.scene-copy{bottom:20%}}
+
+.chat-root.light-theme {
+  --chat-bg-color-hglt: rgba(126, 164, 100, 0.28);
+  --chat-bg-border-color-hglt: #3b5b32;
+  --chat-font-color-link-default: #3b5b32;
+}
+
+.chat-root [class*="send-btn"] {
+  filter: hue-rotate(-130deg) saturate(0.8);
+}
