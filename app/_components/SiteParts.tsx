@@ -6,15 +6,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { PHOTO, MAP, PHONE, EMAIL, NAV, EXPERIENCES, QUESTIONS } from './content';
 
-/* Existing Coze integration: SDK configuration and per-browser user identity
- * are preserved from the working project.
- */
-const COZE_CONFIG: { enabled: boolean; sdkUrl: string; botId: string; token: string } = {
-  enabled: true,
-  sdkUrl: 'https://sf-cdn.coze.com/obj/unpkg-va/flow-platform/chat-app-sdk/1.2.0-beta.6/libs/oversea/index.js',
-  botId: '7685978136609603637',
-  token: 'pat_gqNrVjGcMDMpXLpQJ32R75llohXbgDDZXMDDwGbvExvb4PXAJMxx91FysHC6wFu0',
-};
+const COZE_SDK_URL = 'https://sf-cdn.coze.com/obj/unpkg-va/flow-platform/chat-app-sdk/1.2.0-beta.6/libs/oversea/index.js';
 
 type CozeChatClientInstance = {
   showChatBot?: () => void;
@@ -30,38 +22,35 @@ declare global {
   }
 }
 
-const COZE_USER_ID_STORAGE_KEY = 'chuon-chuon-coze-user-id';
+type CozeSession = { token: string; botId: string; userId: string };
 
-function getOrCreateCozeUserId(): string {
-  if (typeof window === 'undefined') return 'chuon-chuon-web-user';
-
-  const existing = window.localStorage.getItem(COZE_USER_ID_STORAGE_KEY);
-  if (existing) return existing;
-
-  const generated =
-    typeof window.crypto?.randomUUID === 'function'
-      ? `chuon-chuon-${window.crypto.randomUUID()}`
-      : `chuon-chuon-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-
-  window.localStorage.setItem(COZE_USER_ID_STORAGE_KEY, generated);
-  return generated;
+async function fetchCozeSession(): Promise<CozeSession> {
+  const response = await fetch('/api/coze/token', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    cache: 'no-store',
+  });
+  if (!response.ok) throw new Error('Coze session unavailable');
+  const session = await response.json() as Partial<CozeSession>;
+  if (!session.token || !session.botId || !session.userId) throw new Error('Invalid Coze session');
+  return session as CozeSession;
 }
 
-function createCozeOptions(): Record<string, unknown> {
-  // Isolated adapter matching Coze Web SDK 1.2.0-beta.6 installation syntax.
+function createCozeOptions(session: CozeSession): Record<string, unknown> {
   return {
     config: {
       type: 'bot',
-      bot_id: COZE_CONFIG.botId,
+      bot_id: session.botId,
       isIframe: false,
     },
     auth: {
       type: 'token',
-      token: COZE_CONFIG.token,
-      onRefreshToken: async () => COZE_CONFIG.token,
+      token: session.token,
+      onRefreshToken: async () => (await fetchCozeSession()).token,
     },
     userInfo: {
-      id: getOrCreateCozeUserId(),
+      id: session.userId,
       url: 'https://sf-coze-web-cdn.coze.com/obj/eden-sg/lm-lgvj/ljhwZthlaukjlkulzlp/coze/coze-logo.png',
       nickname: 'User',
     },
@@ -97,14 +86,10 @@ function useCoze() {
   const [state, setState] = useState<ChatState>('disabled');
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !COZE_CONFIG.enabled) return;
-    if (!COZE_CONFIG.sdkUrl || !COZE_CONFIG.botId || !COZE_CONFIG.token) {
-      setState('unavailable');
-      return;
-    }
+    if (typeof window === 'undefined') return;
     let absoluteUrl: string;
     try {
-      const url = new URL(COZE_CONFIG.sdkUrl);
+      const url = new URL(COZE_SDK_URL);
       if (url.protocol !== 'https:') { setState('unavailable'); return; }
       absoluteUrl = url.href;
     } catch { setState('unavailable'); return; }
@@ -116,15 +101,17 @@ function useCoze() {
     setState('loading');
     let script = Array.from(document.scripts).find((node) => node.src === absoluteUrl);
 
-    const onLoad = () => {
+    const onLoad = async () => {
       if (disposed || initialized) return;
+      initialized = true;
       if (loadTimer) clearTimeout(loadTimer);
       if (script) script.dataset.chuonCozeLoaded = 'true';
       const Client = window.CozeWebSDK?.WebChatClient;
       if (!Client) { setState('unavailable'); return; }
       try {
-        clientRef.current = new Client(createCozeOptions());
-        initialized = true;
+        const session = await fetchCozeSession();
+        if (disposed) return;
+        clientRef.current = new Client(createCozeOptions(session));
         setState(typeof clientRef.current.showChatBot === 'function' ? 'ready' : 'unavailable');
       } catch { setState('unavailable'); }
     };
