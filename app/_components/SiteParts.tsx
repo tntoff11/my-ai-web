@@ -56,7 +56,7 @@ function createCozeOptions(session: CozeSession): Record<string, unknown> {
     },
     ui: {
       base: {
-        icon: 'https://sf-coze-web-cdn.coze.com/obj/eden-sg/lm-lgvj/ljhwZthlaukjlkulzlp/coze/chatsdk-logo.png',
+        icon: '/images/chuon-chuon/dragonfly-icon.png',
         layout: 'pc',
         lang: 'en',
         zIndex: 1000,
